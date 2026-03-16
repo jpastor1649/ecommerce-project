@@ -37,6 +37,6 @@ jobs:
           SECRET_KEY: "test-secret-key-for-ci-only"
           GEMINI_API_KEY: "test-key"
           ENVIRONMENT: "test"
-        # || true → no falla el pipeline mientras no haya tests reales
-        # Se elimina en Fase 3 cuando existan tests de dominio
+        # Actualmente hay al menos un test placeholder que siempre pasa,
+        # por lo que el pipeline no falla aunque aún no existan tests de dominio reales.
         run: pytest
