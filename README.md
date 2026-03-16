@@ -55,7 +55,6 @@
 - ✅ **lint.yml**: Validación de código (Black, isort, Flake8 / ESLint)
 - ✅ **test.yml**: Tests unitarios + cobertura ≥75%
 - ✅ **docker.yml**: Build y validación de imágenes Docker
-- ✅ **backend.yml** / **frontend.yml**: Pipelines por servicio
 
 ---
 
@@ -106,11 +105,9 @@ E-commerce/
 │
 ├── .github/
 │   └── workflows/
-│       ├── lint.yml                   # ✅ Linting
-│       ├── test.yml                   # ✅ Tests
-│       ├── docker.yml                 # ✅ Docker build
-│       ├── backend.yml                # ✅ Backend CI
-│       └── frontend.yml               # ✅ Frontend CI
+│       ├── lint.yml                   # ✅ Linting (Black, isort, Flake8 / ESLint)
+│       ├── test.yml                   # ✅ Tests unitarios + cobertura ≥75%
+│       └── docker.yml                 # ✅ Docker build validation
 │
 ├── frontend/                          # Next.js 14 App Router
 │   ├── Dockerfile
