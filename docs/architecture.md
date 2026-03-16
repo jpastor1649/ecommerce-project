@@ -299,8 +299,8 @@ graph LR
         subgraph BACKEND_PIPE["Backend Pipeline"]
             B1["📋 Checkout code"]
             B2["🐍 Setup Python 3.12"]
-            B3["🔍 ruff check .<br/>(linting)"]
-            B4["🔍 ruff format --check<br/>(formato)"]
+            B3["🔍 pylint app/<br/>(linting)"]
+            B4["🔍 black --check .<br/>(formato)"]
             B5["🧪 pytest --cov=app<br/>(tests + coverage ≥80%)"]
             B6["🐳 docker build backend"]
             B7["🚀 Deploy → Koyeb"]
@@ -428,7 +428,7 @@ backend/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
-└── pyproject.toml                 # ruff + pytest config
+└── pyproject.toml                 # black + pylint + pytest config
 ```
 
 ---

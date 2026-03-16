@@ -312,7 +312,7 @@ Desarrollar una plataforma de comercio electrónico B2C orientada al mercado col
 |----|--------------|---------|
 | **RNF-MANT-001** | El código debe seguir Clean Architecture con separación estricta de capas | Clean Architecture |
 | **RNF-MANT-002** | El backend debe mantener cobertura de tests ≥ 80% en capa de dominio y casos de uso | ≥ 80% coverage |
-| **RNF-MANT-003** | El código Python debe pasar linting con `ruff` sin errores | Ruff clean |
+| **RNF-MANT-003** | El código Python debe pasar linting con `pylint` y formateo con `black` sin errores | Pylint clean / Black formatted |
 | **RNF-MANT-004** | El código TypeScript debe pasar verificación de tipos (`tsc --noEmit`) sin errores | Type-safe |
 | **RNF-MANT-005** | El API debe estar documentado automáticamente con OpenAPI/Swagger (FastAPI built-in) | OpenAPI 3.0 |
 | **RNF-MANT-006** | Las migraciones de BD deben versionarse con Alembic y ser reproducibles | Alembic migrations |
