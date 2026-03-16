@@ -1,16 +1,16 @@
-# First Delivery — Architectural Prototype
+# Primera Entrega — Prototipo Arquitectónico
 
-> **Course:** Software Architecture (Arquisoft)  
-> **Delivery:** First Delivery — Vertical Prototype  
-> **Date:** 2026-03-18
+> **Curso:** Arquitectura de Software (Arquisoft)  
+> **Entrega:** Primera Entrega — Prototipo Vertical  
+> **Fecha:** 2026-03-18
 
 ---
 
-## Team
+## Equipo
 
-**Name:** Grupo D
+**Nombre:** Grupo D
 
-| # | Full Name |
+| # | Nombre completo |
 |---|---|
 | 1 | Sara Isabel Ospina Valderrama |
 | 2 | Juan David Ruiz Guasca |
@@ -20,23 +20,23 @@
 
 ---
 
-## Software System
+## Sistema de Software
 
-**Name:** *(TBD — to be defined by the team)*
+**Nombre:** *(Por definir)*
 
-**Logo:** *(Placeholder — to be added)*
+**Logo:** *(Por agregar)*
 
-**Description:**
+**Descripción:**
 
-An intelligent B2C e-commerce platform for the Colombian market that allows users to browse a multi-category product catalog, manage a shopping cart, complete purchases through a Colombian payment gateway, and receive AI-powered personalized recommendations through a conversational assistant.
+Plataforma de comercio electrónico B2C inteligente para el mercado colombiano que permite a los usuarios explorar un catálogo de productos multi-categoría, gestionar un carrito de compras, completar compras a través de una pasarela de pagos colombiana y recibir recomendaciones personalizadas mediante un asistente conversacional con IA.
 
-The system integrates Google Gemini Flash as a generative AI provider to deliver smart product search, personalized recommendations based on browsing and purchase history, and automated review moderation — all without requiring proprietary ML model training.
+El sistema integra Google Gemini Flash como proveedor de IA generativa para ofrecer búsqueda inteligente de productos, recomendaciones personalizadas basadas en el historial de navegación y compras, y moderación automatizada de reseñas — sin requerir entrenamiento propio de modelos de ML.
 
 ---
 
-## Functional Requirements
+## Requerimientos Funcionales
 
-The following functional requirements define the domain and scope of the system as defined by the team:
+Los siguientes requerimientos funcionales definen el dominio y el alcance del sistema:
 
 | ID | Descripción |
 |---|---|
@@ -48,23 +48,23 @@ The following functional requirements define the domain and scope of the system 
 | RF-06 | Los usuarios deben poder publicar reseñas y calificaciones sobre los productos adquiridos. |
 | RF-07 | El sistema debe exponer un asistente conversacional de IA generativa que ayude al usuario a encontrar productos, resolver dudas y recibir recomendaciones en lenguaje natural. |
 
-### Functional Scope of the Prototype (First Delivery)
+### Alcance Funcional del Prototipo (Primera Entrega)
 
-The prototype demonstrates a complete **vertical slice** of the system covering the following end-to-end flow:
+El prototipo demuestra un **corte vertical** completo del sistema cubriendo el siguiente flujo de extremo a extremo:
 
-1. **User authentication** (RF-01) — register and login with JWT
-2. **Product catalog** (RF-03) — list products by category, search by name, apply filters
-3. **Shopping cart & checkout** (RF-04) — add/remove products, place order (Wompi sandbox)
-4. **AI recommendation** (RF-05) — core-service requests personalized recommendations from ai-service via internal REST
-5. **AI assistant** (RF-07) — conversational chatbot powered by Google Gemini Flash
+1. **Autenticación de usuarios** (RF-01) — registro e inicio de sesión con JWT
+2. **Catálogo de productos** (RF-03) — listar productos por categoría, buscar por nombre, aplicar filtros
+3. **Carrito de compras y checkout** (RF-04) — agregar/eliminar productos, realizar pedido (Wompi sandbox)
+4. **Recomendaciones con IA** (RF-05) — `core-service` solicita recomendaciones personalizadas a `ai-service` vía REST interno
+5. **Asistente conversacional** (RF-07) — chatbot conversacional impulsado por Google Gemini Flash
 
-This vertical slice covers all architectural layers: `Next.js` → `core-service` → `ai-service` → `PostgreSQL + Redis`.
+Este corte vertical cubre todas las capas arquitectónicas: `Next.js` → `core-service` → `ai-service` → `PostgreSQL + Redis`.
 
 ---
 
-## Non-Functional Requirements
+## Requerimientos No Funcionales
 
-### Team Requirements (Official)
+### Requerimientos del Equipo (Oficiales)
 
 | ID | Descripción | Cómo se satisface |
 |---|---|---|
@@ -75,179 +75,180 @@ This vertical slice covers all architectural layers: `Next.js` → `core-service
 | RNF-05 | **Despliegue en contenedores:** todos los componentes deben desplegarse localmente mediante Docker Compose con un único comando. | `docker compose up --build` levanta: `frontend`, `core-service`, `ai-service`, `postgres` y `redis`. Un solo comando. |
 | RNF-06 | **Multilenguaje:** el sistema debe usar al menos dos lenguajes de programación de propósito general. | Python 3.12 (FastAPI — `core-service` + `ai-service`) y JavaScript/TypeScript (Next.js 14 — `frontend`). |
 
-### Course Requirements (Arquisoft)
+### Requerimientos del Curso (Arquisoft)
 
-| ID | Requirement | How it is satisfied |
+| ID | Requerimiento | Cómo se satisface |
 |---|---|---|
-| C-RNF-01 | Distributed architecture | Three independent deployable units: `frontend` + `core-service` + `ai-service`, all communicating over HTTP |
-| C-RNF-02 | At least one presentation component (web front-end) | Next.js 14 App Router — deployed on Vercel |
-| C-RNF-03 | At least two logic-type components | `core-service` and `ai-service` — independent Python microservices |
-| C-RNF-04 | At least two data-type components (relational + NoSQL) | PostgreSQL 15 + pgvector (relational) and Redis Cloud (NoSQL key-value) |
-| C-RNF-05 | At least two different HTTP-based connectors | ① REST JSON/HTTPS — frontend ↔ backend services  ② Internal REST (httpx async) — core-service → ai-service |
-| C-RNF-06 | At least two programming languages | Python 3.12 (FastAPI) and TypeScript (Next.js 14) |
-| C-RNF-07 | Container-oriented deployment | All components containerized — `docker compose up` deploys the full system locally |
+| C-RNF-01 | Arquitectura distribuida | Tres unidades desplegables independientes: `frontend` + `core-service` + `ai-service`, comunicadas por HTTP |
+| C-RNF-02 | Al menos un componente de presentación (frontend web) | Next.js 14 App Router — desplegado en Vercel |
+| C-RNF-03 | Al menos dos componentes de lógica | `core-service` y `ai-service` — microservicios Python independientes |
+| C-RNF-04 | Al menos dos componentes de datos (relacional + NoSQL) | PostgreSQL 15 + pgvector (relacional) y Redis Cloud (NoSQL clave-valor) |
+| C-RNF-05 | Al menos dos tipos distintos de conectores HTTP | ① REST JSON/HTTPS — frontend ↔ servicios backend  ② REST interno (httpx async) — core-service → ai-service |
+| C-RNF-06 | Al menos dos lenguajes de programación | Python 3.12 (FastAPI) y TypeScript (Next.js 14) |
+| C-RNF-07 | Despliegue orientado a contenedores | Todos los componentes en Docker — `docker compose up` despliega el sistema completo localmente |
 
 ---
 
-## Architectural Structures
+## Estructuras Arquitectónicas
 
-### Component-and-Connector (C&C) Structure
+### Estructura de Componentes y Conectores (C&C)
 
-#### C&C View — Level 1: System Context
+#### Vista C&C — Nivel 1: Contexto del Sistema
 
 ```mermaid
 C4Context
-    title System Context — E-commerce Platform
+    title Diagrama de Contexto — Plataforma E-commerce
 
-    Person(customer, "Customer", "Registers, browses products, manages cart, completes purchases and receives AI recommendations")
-    Person(admin, "Admin", "Manages product catalog, reviews orders and moderates user reviews")
+    Person(customer, "Cliente", "Registra su cuenta, navega el catálogo, gestiona su carrito, completa compras y recibe recomendaciones con IA")
+    Person(admin, "Administrador", "Gestiona el catálogo de productos, revisa órdenes y modera reseñas de usuarios")
 
-    System(platform, "E-commerce Platform", "Intelligent B2C e-commerce system with generative AI. Supports catalog browsing, cart management, checkout, and AI-powered personalized recommendations")
+    System(platform, "Plataforma E-commerce", "Sistema B2C inteligente con IA generativa. Catálogo multi-categoría, carrito, checkout con métodos de pago colombianos y recomendaciones personalizadas")
 
-    System_Ext(gemini, "Google Gemini Flash API", "External LLM for conversational assistant, product recommendations, semantic search embeddings and review moderation")
-    System_Ext(wompi, "Wompi Colombia", "Colombian payment gateway. Processes PSE, Nequi and credit/debit card transactions")
-    SystemDb_Ext(supabase, "Supabase", "Managed PostgreSQL 15 with pgvector extension for semantic search and Supabase Storage for product images")
-    System_Ext(redis, "Redis Cloud", "In-memory cache for JWT sessions, shopping carts and search result TTL caching")
+    System_Ext(gemini, "Google Gemini Flash API", "LLM externo para asistente conversacional, recomendaciones, embeddings de búsqueda semántica y moderación de reseñas")
+    System_Ext(wompi, "Wompi Colombia", "Pasarela de pagos colombiana — PSE, Nequi y tarjetas débito/crédito")
+    SystemDb_Ext(supabase, "Supabase", "PostgreSQL 15 gestionado con extensión pgvector para búsqueda semántica y almacenamiento de imágenes")
+    System_Ext(redis, "Redis Cloud", "Caché NoSQL clave-valor — sesiones JWT, carritos de compra y TTL de búsquedas")
 
-    Rel(customer, platform, "Browses, buys, uses AI chatbot", "HTTPS")
-    Rel(admin, platform, "Manages catalog and orders", "HTTPS")
-    Rel(platform, gemini, "Chatbot, recommendations, embeddings, moderation", "HTTPS / Gemini SDK")
-    Rel(platform, wompi, "Processes payments, receives webhooks", "HTTPS / REST")
-    Rel(platform, supabase, "Stores and queries data + images", "PostgreSQL Protocol (TLS)")
-    Rel(platform, redis, "Caches sessions, carts and search queries", "Redis Protocol (TLS)")
+    Rel(customer, platform, "Navega, compra, usa chatbot IA", "HTTPS")
+    Rel(admin, platform, "Gestiona catálogo y órdenes", "HTTPS")
+    Rel(platform, gemini, "Chat, recomendaciones, embeddings, moderación", "HTTPS / Gemini SDK")
+    Rel(platform, wompi, "Procesa pagos, recibe webhooks", "HTTPS / REST")
+    Rel(platform, supabase, "Almacena y consulta datos e imágenes", "PostgreSQL (TLS)")
+    Rel(platform, redis, "Cachea sesiones, carritos y consultas", "Redis (TLS)")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
 
-#### C&C View — Level 2: Container Diagram
+#### Vista C&C — Nivel 2: Diagrama de Contenedores
 
 ```mermaid
 C4Container
-    title Container Diagram — E-commerce Platform
+    title Diagrama de Contenedores — Plataforma E-commerce
 
-    Person(customer, "Customer", "End buyer")
-    Person(admin, "Admin", "Store manager")
+    Person(customer, "Cliente", "Comprador final")
+    Person(admin, "Administrador", "Gestor de la tienda")
 
-    System_Boundary(platform, "E-commerce Platform") {
-        Container(frontend, "Next.js Frontend", "TypeScript, Next.js 14 App Router", "Product catalog, cart, checkout, order history, admin panel and AI chatbot widget")
-        Container(core, "core-service", "Python 3.12, FastAPI, SQLAlchemy 2.0", "Authentication, product catalog, orders, cart, payments and reviews. Core business logic.")
-        Container(ai, "ai-service", "Python 3.12, FastAPI, google-generativeai", "Conversational AI assistant (Gemini), personalized recommendations, semantic search with pgvector and LLM-based review moderation")
-        ContainerDb(db, "PostgreSQL Database", "Supabase PostgreSQL 15 + pgvector", "Stores users, products, orders, reviews, payments and product embedding vectors for semantic search")
-        ContainerDb(cache, "Redis Cache", "Redis Cloud — NoSQL key-value", "JWT sessions, shopping carts, search result cache (TTL) and rate limiting")
+    System_Boundary(platform, "Plataforma E-commerce") {
+        Container(frontend, "Frontend Next.js", "TypeScript, Next.js 14 App Router", "Catálogo de productos, carrito, checkout, historial de órdenes, panel admin y widget de chatbot IA")
+        Container(core, "core-service", "Python 3.12, FastAPI, SQLAlchemy 2.0", "Autenticación, catálogo de productos, carrito, órdenes, pagos y reseñas. Lógica de negocio principal.")
+        Container(ai, "ai-service", "Python 3.12, FastAPI, google-generativeai", "Asistente IA conversacional (Gemini), recomendaciones personalizadas, búsqueda semántica con pgvector y moderación de reseñas con LLM")
+        ContainerDb(db, "Base de Datos PostgreSQL", "Supabase PostgreSQL 15 + pgvector", "Almacena usuarios, productos, órdenes, reseñas, pagos y vectores de embeddings para búsqueda semántica")
+        ContainerDb(cache, "Caché Redis", "Redis Cloud — NoSQL clave-valor", "Sesiones JWT, estado del carrito, caché de resultados de búsqueda (TTL) y rate limiting")
     }
 
     System_Ext(gemini, "Google Gemini Flash API", "LLM + text-embedding-004")
-    System_Ext(wompi, "Wompi Colombia", "PSE · Nequi · Cards")
+    System_Ext(wompi, "Wompi Colombia", "PSE · Nequi · Tarjetas")
 
-    Rel(customer, frontend, "Browses and shops", "HTTPS")
-    Rel(admin, frontend, "Manages store", "HTTPS")
-    Rel(frontend, core, "Auth, products, orders, payments, reviews", "① REST API — JSON/HTTPS")
-    Rel(frontend, ai, "AI chat, semantic search, recommendations", "① REST API — JSON/HTTPS")
-    Rel(core, ai, "Requests recommendations and review moderation", "② Internal REST — httpx async")
-    Rel(core, db, "Reads/writes users, products, orders, payments", "PostgreSQL Protocol (TLS)")
-    Rel(ai, db, "Reads products + vectors, writes embeddings", "PostgreSQL Protocol (TLS)")
-    Rel(core, cache, "JWT sessions, carts, rate limits", "Redis Protocol (TLS)")
-    Rel(ai, cache, "Caches Gemini responses (TTL 24h)", "Redis Protocol (TLS)")
-    Rel(core, wompi, "Creates transactions, validates HMAC-SHA256 webhooks", "HTTPS / REST")
-    Rel(ai, gemini, "Chat, recommendations, embeddings, moderation", "HTTPS / Gemini SDK")
+    Rel(customer, frontend, "Navega y compra", "HTTPS")
+    Rel(admin, frontend, "Gestiona la tienda", "HTTPS")
+    Rel(frontend, core, "Auth, productos, órdenes, pagos, reseñas", "① REST API — JSON/HTTPS")
+    Rel(frontend, ai, "Chat IA, búsqueda semántica, recomendaciones", "① REST API — JSON/HTTPS")
+    Rel(core, ai, "Solicita recomendaciones y moderación de reseñas", "② REST Interno — httpx async")
+    Rel(core, db, "Lee/escribe datos de negocio", "PostgreSQL (TLS)")
+    Rel(ai, db, "Lee vectores de productos, escribe embeddings", "PostgreSQL (TLS)")
+    Rel(core, cache, "Sesiones, carrito, rate limits", "Redis (TLS)")
+    Rel(ai, cache, "Cachea respuestas de Gemini (TTL)", "Redis (TLS)")
+    Rel(core, wompi, "Pagos + webhooks HMAC-SHA256", "HTTPS / REST")
+    Rel(ai, gemini, "Chat, embeddings, moderación", "HTTPS / Gemini SDK")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
 
 ---
 
-#### Description of Architectural Styles Used
+#### Descripción de los Estilos Arquitectónicos Utilizados
 
-**1. Microservices Architecture**
+**1. Arquitectura de Microservicios**
 
-The backend is split into two independent services with single-responsibility domains:
+El backend está dividido en dos servicios independientes con responsabilidades de dominio únicas:
 
-- **`core-service`** — owns all e-commerce business logic: authentication, product catalog, shopping cart, orders and payments. Deployed on Koyeb (always-ON free tier).
-- **`ai-service`** — owns all AI/ML concerns: conversational assistant, product recommendations, semantic search and review moderation. Deployed on Render (free tier). Integrated with Google Gemini Flash.
+- **`core-service`** — propietario de toda la lógica de negocio del e-commerce: autenticación, catálogo de productos, carrito de compras, órdenes y pagos. Desplegado en Koyeb (free tier always-ON).
+- **`ai-service`** — propietario de todas las funcionalidades de IA: asistente conversacional, recomendaciones de productos, búsqueda semántica y moderación de reseñas. Desplegado en Render (free tier). Integrado con Google Gemini Flash.
 
-Both services are independently deployable and fault-tolerant. A failure in `ai-service` does not break the core e-commerce flow.
+Ambos servicios son desplegables de forma independiente y tolerantes a fallos. Un fallo en `ai-service` no interrumpe el flujo principal del e-commerce.
 
-**2. Clean Architecture (per service)**
+**2. Clean Architecture (por servicio)**
 
-Each microservice follows Clean Architecture (Onion Model) with a strict inward dependency direction:
+Cada microservicio sigue Clean Architecture (Modelo Cebolla) con una dirección de dependencia estrictamente hacia adentro:
 
 ```
-Presentation → Application → Domain ← Infrastructure
+Presentación → Aplicación → Dominio ← Infraestructura
 ```
 
-- **Domain layer** — pure Python entities, value objects and repository interfaces. Zero external imports.
-- **Application layer** — use cases that orchestrate domain logic.
-- **Infrastructure layer** — concrete implementations: SQLAlchemy repositories, Redis cache, Gemini adapter, Wompi adapter.
-- **Presentation layer** — FastAPI routers and Pydantic v2 schemas.
+- **Capa de Dominio** — entidades Python puras, value objects e interfaces de repositorio. Cero imports externos.
+- **Capa de Aplicación** — casos de uso que orquestan la lógica del dominio.
+- **Capa de Infraestructura** — implementaciones concretas: repositorios SQLAlchemy, caché Redis, adaptador Gemini, adaptador Wompi.
+- **Capa de Presentación** — routers FastAPI y esquemas Pydantic v2.
 
-**3. BFF Pattern (Backend for Frontend)**
+**3. Patrón BFF (Backend for Frontend)**
 
-Next.js acts as a Backend-for-Frontend: it calls both `core-service` and `ai-service` from server-side components, aggregating responses before rendering. This avoids exposing internal service URLs to the browser.
+Next.js actúa como BFF: llama a `core-service` y `ai-service` desde componentes del lado del servidor, agregando las respuestas antes de renderizar. Esto evita exponer las URLs internas de los servicios al navegador.
 
 ---
 
-#### Description of Architectural Elements and Relations
+#### Descripción de Elementos y Relaciones Arquitectónicas
 
-| Element | Type | Technology | Responsibility |
+| Elemento | Tipo | Tecnología | Responsabilidad |
 |---|---|---|---|
-| `Next.js Frontend` | Presentation component | TypeScript, Next.js 14 | Renders UI; calls core-service and ai-service via REST |
-| `core-service` | Logic component | Python 3.12, FastAPI | Auth, products, orders, cart, payments, reviews |
-| `ai-service` | Logic component | Python 3.12, FastAPI | Gemini chatbot, recommendations, semantic search, moderation |
-| `PostgreSQL + pgvector` | Data component (relational) | Supabase PostgreSQL 15 | Persistent storage of all domain entities + embedding vectors |
-| `Redis` | Data component (NoSQL key-value) | Redis Cloud | Session cache, cart state, search TTL cache, rate limiting |
-| `REST API connector ①` | HTTP connector | JSON / HTTPS | Communication between frontend and backend services |
-| `Internal REST connector ②` | HTTP connector | httpx async / HTTPS | Communication from core-service to ai-service |
-| `Google Gemini Flash` | External system | google-generativeai SDK | LLM provider: chat, embeddings, moderation |
-| `Wompi Colombia` | External system | REST API | Payment gateway: PSE, Nequi, cards |
+| `Frontend Next.js` | Componente de presentación | TypeScript, Next.js 14 | Renderiza la UI; llama a core-service y ai-service vía REST |
+| `core-service` | Componente de lógica | Python 3.12, FastAPI | Auth, productos, órdenes, carrito, pagos, reseñas |
+| `ai-service` | Componente de lógica | Python 3.12, FastAPI | Chatbot Gemini, recomendaciones, búsqueda semántica, moderación |
+| `PostgreSQL + pgvector` | Componente de datos (relacional) | Supabase PostgreSQL 15 | Almacenamiento persistente de entidades de dominio + vectores de embeddings |
+| `Redis` | Componente de datos (NoSQL clave-valor) | Redis Cloud | Caché de sesiones, estado del carrito, TTL de búsquedas, rate limiting |
+| `Conector REST ①` | Conector HTTP | JSON / HTTPS | Comunicación entre frontend y servicios backend |
+| `Conector REST interno ②` | Conector HTTP | httpx async / HTTPS | Comunicación de core-service hacia ai-service |
+| `Google Gemini Flash` | Sistema externo | google-generativeai SDK | Proveedor LLM: chat, embeddings, moderación |
+| `Wompi Colombia` | Sistema externo | REST API | Pasarela de pagos: PSE, Nequi, tarjetas |
 
 ---
 
-## Prototype
+## Prototipo
 
-### Deployment Instructions (Local)
+### Instrucciones de Despliegue Local
 
-**Prerequisites:**
-- Docker Desktop installed and running
+**Prerequisitos:**
+- Docker Desktop instalado y en ejecución
 - Git
 
-**Steps:**
+**Pasos:**
 
 ```bash
-# 1. Clone the repository
+# 1. Clonar el repositorio
 git clone https://github.com/jpastor1649/ecommerce-project.git
 cd ecommerce-project
 
-# 2. Copy environment variables
+# 2. Copiar variables de entorno
 cp .env.example .env
-# Edit .env and fill in:
-#   GEMINI_API_KEY=your_key_here
-#   WOMPI_PUBLIC_KEY=your_key_here
-#   WOMPI_PRIVATE_KEY=your_key_here
+# Editar .env y completar:
+#   GEMINI_API_KEY=tu_clave_aqui
+#   WOMPI_PUBLIC_KEY=tu_clave_aqui
+#   WOMPI_PRIVATE_KEY=tu_clave_aqui
 
-# 3. Start all services with a single command
+# 3. Levantar todos los servicios con un solo comando
 docker compose up --build
 
-# 4. Access the application
-# Frontend:              http://localhost:3000
-# core-service API docs: http://localhost:8000/docs
-# ai-service API docs:   http://localhost:8001/docs
+# 4. Acceder a la aplicación
+# Frontend:                    http://localhost:3000
+# Documentación core-service:  http://localhost:8000/docs
+# Documentación ai-service:    http://localhost:8001/docs
 ```
 
-**Services started by `docker compose up`:**
+**Servicios levantados por `docker compose up`:**
 
-| Service | Port | Technology | Description |
+| Servicio | Puerto | Tecnología | Descripción |
 |---|---|---|---|
-| `frontend` | 3000 | Next.js 14 | Web application |
-| `core-service` | 8000 | FastAPI (Python) | Business logic API |
-| `ai-service` | 8001 | FastAPI (Python) | AI features API |
-| `postgres` | 5432 | PostgreSQL 15 + pgvector | Relational database |
-| `redis` | 6379 | Redis | NoSQL cache |
+| `frontend` | 3000 | Next.js 14 | Aplicación web |
+| `core-service` | 8000 | FastAPI (Python) | API de lógica de negocio |
+| `ai-service` | 8001 | FastAPI (Python) | API de funcionalidades IA |
+| `postgres` | 5432 | PostgreSQL 15 + pgvector | Base de datos relacional |
+| `redis` | 6379 | Redis | Caché NoSQL |
 
-**To stop all services:**
+**Para detener todos los servicios:**
 ```bash
 docker compose down
 ```
 
 ---
 
+*Documento generado en Fase 0 — Grupo D, Arquisoft.*
 
