@@ -36,43 +36,56 @@ The system integrates Google Gemini Flash as a generative AI provider to deliver
 
 ## Functional Requirements
 
-The following functional requirements define the domain and scope of the system:
+The following functional requirements define the domain and scope of the system as defined by the team:
 
-| ID | Description |
+| ID | Descripción |
 |---|---|
-| RF-01 | The system must allow new user registration, login, and individual profile management. |
-| RF-02 | Users must be able to browse the full product catalog, search by name or category, and apply filters. |
-| RF-03 | Users must be able to manage a shopping cart and complete the checkout process. |
-| RF-04 | The system must process payments through Wompi Colombia (PSE, Nequi, credit/debit cards). |
-| RF-05 | The system must suggest similar or complementary products based on the user's purchase history using a generative AI model. |
-| RF-06 | Users must be able to publish reviews and ratings on purchased products. |
-| RF-07 | The system must expose a conversational AI assistant (chatbot) that helps users find products and receive recommendations in natural language. |
+| RF-01 | El sistema debe permitir el registro de nuevos usuarios, inicio de sesión y gestión de perfiles individuales. |
+| RF-02 | La plataforma debe almacenar el historial de compras y las preferencias del usuario para personalizar la experiencia. |
+| RF-03 | El cliente debe poder visualizar el catálogo completo, realizar búsquedas por nombre o categoría y aplicar filtros de productos. |
+| RF-04 | La aplicación debe permitir gestionar el carrito de compras y completar el proceso de checkout. |
+| RF-05 | El sistema debe sugerir productos similares o complementarios basados en el historial de compras del usuario actual y de usuarios con comportamiento similar, utilizando un modelo de IA generativa. |
+| RF-06 | Los usuarios deben poder publicar reseñas y calificaciones sobre los productos adquiridos. |
+| RF-07 | El sistema debe exponer un asistente conversacional de IA generativa que ayude al usuario a encontrar productos, resolver dudas y recibir recomendaciones en lenguaje natural. |
 
 ### Functional Scope of the Prototype (First Delivery)
 
 The prototype demonstrates a complete **vertical slice** of the system covering the following end-to-end flow:
 
-1. **User authentication** — register and login with JWT
-2. **Product catalog** — list products by category, search by name
-3. **AI recommendation** — core-service requests personalized recommendations from ai-service via internal REST
-4. **Shopping cart** — add/remove products, view cart total
-5. **Checkout** — place an order (Wompi sandbox integration)
+1. **User authentication** (RF-01) — register and login with JWT
+2. **Product catalog** (RF-03) — list products by category, search by name, apply filters
+3. **Shopping cart & checkout** (RF-04) — add/remove products, place order (Wompi sandbox)
+4. **AI recommendation** (RF-05) — core-service requests personalized recommendations from ai-service via internal REST
+5. **AI assistant** (RF-07) — conversational chatbot powered by Google Gemini Flash
 
-This scope covers all layers: frontend (Next.js) → core-service (FastAPI) → ai-service (FastAPI) → PostgreSQL + Redis.
+This vertical slice covers all architectural layers: `Next.js` → `core-service` → `ai-service` → `PostgreSQL + Redis`.
 
 ---
 
 ## Non-Functional Requirements
 
+### Team Requirements (Official)
+
+| ID | Descripción | Cómo se satisface |
+|---|---|---|
+| RNF-01 | **Disponibilidad:** el sistema debe ser resiliente ante fallos de componentes individuales mediante una arquitectura distribuida en contenedores. | `core-service` y `ai-service` son servicios independientes. Un fallo en `ai-service` no interrumpe el flujo de e-commerce del `core-service`. Cada servicio corre en su propio contenedor Docker. |
+| RNF-02 | **Separación de responsabilidades:** la lógica de negocio debe distribuirse en microservicios independientes, cada uno con una única responsabilidad de dominio. | `core-service` (auth, productos, órdenes, pagos, reseñas) y `ai-service` (Gemini, recomendaciones, búsqueda semántica, moderación) — dominios completamente separados, desplegables de forma independiente. |
+| RNF-03 | **Asistencia IA generativa:** integrar un LLM a través de una API externa para el asistente conversacional y las recomendaciones, sin entrenamiento propio de modelos. | Google Gemini Flash API vía `google-generativeai` SDK. Se consume como API externa. No hay entrenamiento propio ni modelos locales. |
+| RNF-04 | **Categorización del catálogo:** los productos deben estar categorizados para facilitar su localización. | Tabla `categories` en PostgreSQL con relación a `products`. El frontend expone filtros y navegación por categoría. |
+| RNF-05 | **Despliegue en contenedores:** todos los componentes deben desplegarse localmente mediante Docker Compose con un único comando. | `docker compose up --build` levanta: `frontend`, `core-service`, `ai-service`, `postgres` y `redis`. Un solo comando. |
+| RNF-06 | **Multilenguaje:** el sistema debe usar al menos dos lenguajes de programación de propósito general. | Python 3.12 (FastAPI — `core-service` + `ai-service`) y JavaScript/TypeScript (Next.js 14 — `frontend`). |
+
+### Course Requirements (Arquisoft)
+
 | ID | Requirement | How it is satisfied |
 |---|---|---|
-| RNF-01 | Distributed architecture | Two independent backend microservices (`core-service` + `ai-service`) plus a separate frontend (`Next.js`), all communicating over HTTP |
-| RNF-02 | At least one presentation component (web front-end) | Next.js 14 (App Router) deployed on Vercel |
-| RNF-03 | At least two logic-type components | `core-service` (business logic: auth, products, orders, payments, reviews) and `ai-service` (AI logic: recommendations, search, moderation, chatbot) |
-| RNF-04 | At least two data-type components (relational + NoSQL) | PostgreSQL 15 with pgvector (relational) via Supabase + Redis Cloud (NoSQL key-value) for sessions and cart cache |
-| RNF-05 | At least two different HTTP-based connectors | ① REST API (JSON/HTTPS) between Next.js frontend and `core-service` ② Internal REST (httpx async) between `core-service` and `ai-service` |
-| RNF-06 | At least two programming languages | Python 3.12 (FastAPI — both backend services) and JavaScript/TypeScript (Next.js 14 — frontend) |
-| RNF-07 | Container-oriented deployment | All components containerized with Docker; full local deployment with a single `docker compose up` command |
+| C-RNF-01 | Distributed architecture | Three independent deployable units: `frontend` + `core-service` + `ai-service`, all communicating over HTTP |
+| C-RNF-02 | At least one presentation component (web front-end) | Next.js 14 App Router — deployed on Vercel |
+| C-RNF-03 | At least two logic-type components | `core-service` and `ai-service` — independent Python microservices |
+| C-RNF-04 | At least two data-type components (relational + NoSQL) | PostgreSQL 15 + pgvector (relational) and Redis Cloud (NoSQL key-value) |
+| C-RNF-05 | At least two different HTTP-based connectors | ① REST JSON/HTTPS — frontend ↔ backend services  ② Internal REST (httpx async) — core-service → ai-service |
+| C-RNF-06 | At least two programming languages | Python 3.12 (FastAPI) and TypeScript (Next.js 14) |
+| C-RNF-07 | Container-oriented deployment | All components containerized — `docker compose up` deploys the full system locally |
 
 ---
 
@@ -237,4 +250,4 @@ docker compose down
 
 ---
 
-*Document generated from Phase 0 discovery — Grupo D, Arquisoft.*
+
