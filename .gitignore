@@ -205,3 +205,30 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Env files (nunca commitear secretos)
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
