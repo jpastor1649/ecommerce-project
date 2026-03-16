@@ -31,8 +31,8 @@ jobs:
 
       - name: black (formato)
         working-directory: backend
-        run: black --check src/ || true
+        run: black --check src/
 
       - name: pylint
         working-directory: backend
-        run: pylint src/ || true
+        run: pylint src/

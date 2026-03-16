@@ -17,7 +17,7 @@ jobs:
 
       - name: Build imagen
         working-directory: backend
-        # Falla si no existe Dockerfile — se activa en Fase 1 cuando lo creemos
+        # No falla si no existe Dockerfile — el build se activará en Fase 1 cuando lo creemos
         run: |
           if [ -f Dockerfile ]; then
             docker build -t ecommerce-backend:latest .

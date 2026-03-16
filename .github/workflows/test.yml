@@ -39,4 +39,4 @@ jobs:
           ENVIRONMENT: "test"
         # || true → no falla el pipeline mientras no haya tests reales
         # Se elimina en Fase 3 cuando existan tests de dominio
-        run: pytest || true
+        run: pytest
