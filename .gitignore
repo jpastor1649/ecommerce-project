@@ -5,7 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
-
+# Visual Studio Code
+.vscode
 # Distribution / packaging
 .Python
 build/
@@ -232,3 +233,19 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Project specific
+uploads/
+exports/
+temp/
+logs/
+
+# Database local
+*.db
+*.sqlite3
