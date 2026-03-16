@@ -332,5 +332,5 @@ Este proyecto está licenciado bajo la **Licencia MIT**. Ver [LICENSE](LICENSE) 
 
 <div align="center">
   <p>Construido con ❤️ por el Grupo D</p>
-  <p>Arquitectura de Software — Arquisoft 2026</p>
+  <p>Arquitectura de Software — UNAL 2026</p>
 </div>
