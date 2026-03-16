@@ -50,21 +50,16 @@ Los siguientes requerimientos funcionales definen el dominio y el alcance del si
 
 ### Alcance Funcional del Prototipo (Primera Entrega)
 
-El prototipo demuestra un **corte vertical** completo del sistema cubriendo el siguiente flujo de extremo a extremo:
+El prototipo demuestra un **corte vertical mínimo** del sistema: un flujo completo de extremo a extremo que atraviesa todas las capas arquitectónicas con la menor complejidad funcional posible.
 
-1. **Autenticación de usuarios** (RF-01) — registro e inicio de sesión con JWT
-2. **Catálogo de productos** (RF-03) — listar productos por categoría, buscar por nombre, aplicar filtros
-3. **Carrito de compras y checkout** (RF-04) — agregar/eliminar productos, realizar pedido (Wompi sandbox)
-4. **Recomendaciones con IA** (RF-05) — `core-service` solicita recomendaciones personalizadas a `ai-service` vía REST interno
-5. **Asistente conversacional** (RF-07) — chatbot conversacional impulsado por Google Gemini Flash
+**Flujo cubierto:**
 
-Este corte vertical cubre todas las capas arquitectónicas: `Next.js` → `core-service` → `ai-service` → `PostgreSQL + Redis`.
+1. **Inicio de sesión** (RF-01) — el usuario ingresa sus credenciales → `core-service` valida y emite JWT → sesión guardada en Redis
+2. **Catálogo de productos** (RF-03) — el usuario navega el catálogo por categoría → `core-service` consulta PostgreSQL → `ai-service` agrega una recomendación simple basada en la categoría consultada (Gemini Flash)
 
 ---
 
 ## Requerimientos No Funcionales
-
-### Requerimientos del Equipo (Oficiales)
 
 | ID | Descripción | Cómo se satisface |
 |---|---|---|
@@ -75,7 +70,7 @@ Este corte vertical cubre todas las capas arquitectónicas: `Next.js` → `core-
 | RNF-05 | **Despliegue en contenedores:** todos los componentes deben desplegarse localmente mediante Docker Compose con un único comando. | `docker compose up --build` levanta: `frontend`, `core-service`, `ai-service`, `postgres` y `redis`. Un solo comando. |
 | RNF-06 | **Multilenguaje:** el sistema debe usar al menos dos lenguajes de programación de propósito general. | Python 3.12 (FastAPI — `core-service` + `ai-service`) y JavaScript/TypeScript (Next.js 14 — `frontend`). |
 
-### Requerimientos del Curso (Arquisoft)
+### Requerimientos del Curso 
 
 | ID | Requerimiento | Cómo se satisface |
 |---|---|---|
@@ -91,9 +86,7 @@ Este corte vertical cubre todas las capas arquitectónicas: `Next.js` → `core-
 
 ## Estructuras Arquitectónicas
 
-### Estructura de Componentes y Conectores (C&C)
-
-#### Vista C&C — Nivel 1: Contexto del Sistema
+#### Contexto del Sistema
 
 ```mermaid
 C4Context
@@ -119,7 +112,7 @@ C4Context
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
 
-#### Vista C&C — Nivel 2: Diagrama de Contenedores
+#### Diagrama de Contenedores
 
 ```mermaid
 C4Container
