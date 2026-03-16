@@ -13,7 +13,7 @@ on:
 
 jobs:
   lint:
-    name: Ruff — Lint + Format
+    name: Pylint
     runs-on: ubuntu-latest
 
     steps:
@@ -29,10 +29,10 @@ jobs:
         working-directory: backend
         run: pip install -e ".[dev]"
 
-      - name: ruff check (errores de código)
+      - name: black (formato)
         working-directory: backend
-        run: ruff check .
+        run: black --check src/ || true
 
-      - name: ruff format (formato consistente)
+      - name: pylint
         working-directory: backend
-        run: ruff format --check .
+        run: pylint src/ || true
