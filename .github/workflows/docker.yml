@@ -1,0 +1,26 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/docker.yml"
+
+jobs:
+  docker:
+    name: Build imagen Docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build imagen
+        working-directory: backend
+        # Falla si no existe Dockerfile — se activa en Fase 1 cuando lo creemos
+        run: |
+          if [ -f Dockerfile ]; then
+            docker build -t ecommerce-backend:latest .
+          else
+            echo "Dockerfile aún no existe — se crea en Fase 1"
+          fi
