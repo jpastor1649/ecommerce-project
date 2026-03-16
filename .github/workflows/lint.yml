@@ -35,4 +35,4 @@ jobs:
 
       - name: pylint
         working-directory: backend
-        run: pylint src/ || true
+        run: pylint src/
