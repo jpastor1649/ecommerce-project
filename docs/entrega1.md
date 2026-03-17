@@ -41,13 +41,16 @@ Los siguientes requerimientos funcionales definen el dominio y el alcance del si
 | ID | Descripción |
 |---|---|
 | RF-01 | El sistema debe permitir el registro de nuevos usuarios, inicio de sesión y gestión de perfiles individuales. |
-| RF-02 | La plataforma debe almacenar el historial de compras y las preferencias del usuario para personalizar la experiencia. |
-| RF-03 | El cliente debe poder visualizar el catálogo completo, realizar búsquedas por nombre o categoría y aplicar filtros de productos. |
-| RF-04 | La aplicación debe permitir gestionar el carrito de compras y completar el proceso de checkout. |
-| RF-05 | El sistema debe sugerir productos similares o complementarios basados en el historial de compras del usuario actual y de usuarios con comportamiento similar, utilizando un modelo de IA generativa. |
-| RF-06 | Los usuarios deben poder publicar reseñas y calificaciones sobre los productos adquiridos. |
+| RF-02 | El sistema debe almacenar el historial de compras y las interacciones de los usuarios con los productos, incluyendo acciones como la visualización y la adquisición de productos. |
+| RF-03 | El sistema debe permitir a los clientes visualizar el catálogo completo de productos disponibles en la plataforma. |
+| RF-04 | El sistema debe permitir a los usuarios gestionar su carrito de compras, incluyendo agregar productos, eliminar productos y modificar la cantidad de unidades antes de realizar la compra. |
+| RF-05 | El sistema debe generar recomendaciones de productos personalizadas utilizando un sistema de inteligencia artificial que analice el historial de compras y las interacciones de los usuarios con los productos. |
+| RF-06 | El sistema debe permitir a los usuarios publicar reseñas y calificaciones sobre los productos que hayan adquirido. |
 | RF-07 | El sistema debe exponer un asistente conversacional de IA generativa que ayude al usuario a encontrar productos, resolver dudas y recibir recomendaciones en lenguaje natural. |
-
+| RF-08 | El sistema debe permitir a los usuarios registrar y publicar productos de calzado en el catálogo de la plataforma para su venta. |
+| RF-09 | El sistema debe permitir a los usuarios visualizar las estadísticas de ventas realizadas, incluyendo información como número de productos vendidos, ingresos generados y productos más vendidos. |
+| RF-10 | El sistema debe permitir a los usuarios completar el proceso de checkout para finalizar la compra de los productos seleccionados, ingresando la información de envío y seleccionando un método de pago disponible. |
+| RF-11 | El sistema debe permitir a los clientes buscar productos por nombre o categoría y aplicar filtros para refinar los resultados de búsqueda. |
 ### Alcance Funcional del Prototipo (Primera Entrega)
 
 El prototipo demuestra un **corte vertical mínimo** del sistema: un flujo completo de extremo a extremo que atraviesa todas las capas arquitectónicas con la menor complejidad funcional posible.
