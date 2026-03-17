@@ -11,7 +11,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    text,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -60,10 +60,10 @@ class Product(Base):
     stock: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), onupdate=text("CURRENT_TIMESTAMP"), nullable=True
+        DateTime(timezone=True), onupdate=func.now(), nullable=True
     )
 
     category: Mapped["Category"] = relationship(back_populates="products")
