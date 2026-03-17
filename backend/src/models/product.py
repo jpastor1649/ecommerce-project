@@ -62,10 +62,13 @@ class Product(Base):
     stock: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()  # pylint: disable=not-callable
+        DateTime(timezone=True),
+        server_default=func.now(),  # pylint: disable=not-callable
     )
     updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now(), nullable=True  # pylint: disable=not-callable
+        DateTime(timezone=True),
+        onupdate=func.now(),  # pylint: disable=not-callable
+        nullable=True,
     )
 
     category: Mapped["Category"] = relationship(back_populates="products")
