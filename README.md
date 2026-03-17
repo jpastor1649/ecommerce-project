@@ -3,7 +3,7 @@
 [![Lint](https://github.com/jpastor1649/ecommerce-project/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/lint.yml)
 [![Tests](https://github.com/jpastor1649/ecommerce-project/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/test.yml)
 [![Docker Build](https://github.com/jpastor1649/ecommerce-project/actions/workflows/docker.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/docker.yml)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Next.js%2014-3178C6.svg)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%2B-336791.svg)](https://www.postgresql.org/)
@@ -101,7 +101,6 @@ E-commerce/
 ├── LICENSE                            # MIT License
 ├── .gitignore
 ├── docker-compose.yml                 # Orquestación local completa
-├── .env.example                       # Template de variables de entorno
 │
 ├── .github/
 │   └── workflows/
@@ -109,33 +108,18 @@ E-commerce/
 │       ├── test.yml                   # ✅ Tests unitarios + cobertura ≥75%
 │       └── docker.yml                 # ✅ Docker build validation
 │
-├── frontend/                          # Next.js 14 App Router
+├── backend/                           # Backend FastAPI actual
 │   ├── Dockerfile
-│   ├── package.json
-│   └── src/
-│       ├── app/                       # Rutas (App Router)
-│       ├── components/                # Componentes reutilizables
-│       └── lib/                       # API clients, hooks, utils
-│
-├── backend/                           # Microservicios Python
-│   ├── core-service/                  # Auth, productos, órdenes, pagos
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   └── src/
-│   │       ├── main.py
-│   │       ├── routers/               # Endpoints FastAPI
-│   │       ├── services/              # Casos de uso
-│   │       ├── models/                # ORM SQLAlchemy
-│   │       └── schemas/               # Pydantic v2
-│   │
-│   └── ai-service/                    # Gemini, recomendaciones, búsqueda
-│       ├── Dockerfile
-│       ├── requirements.txt
-│       └── src/
-│           ├── main.py
-│           ├── routers/
-│           ├── services/
-│           └── adapters/              # GeminiAdapter, VectorRepository
+│   ├── pyproject.toml
+│   ├── .env.example                   # Variables para ejecución local
+│   ├── .env.docker.example            # Variables para Docker Compose
+│   ├── src/
+│   │   ├── main.py
+│   │   ├── routers/
+│   │   ├── services/
+│   │   ├── models/
+│   │   └── schemas/
+│   └── tests/
 │
 └── docs/
     ├── entrega1.md                    # Primera entrega Arquisoft
@@ -156,6 +140,7 @@ E-commerce/
 
 - **Docker Desktop** instalado y en ejecución
 - **Git**
+- **Python 3.12.x**
 
 ### Con Docker Compose (Recomendado)
 
@@ -165,29 +150,24 @@ git clone https://github.com/jpastor1649/ecommerce-project.git
 cd ecommerce-project
 
 # 2. Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus claves:
-#   GEMINI_API_KEY=tu_clave_gemini
-#   WOMPI_PUBLIC_KEY=tu_clave_wompi_publica
-#   WOMPI_PRIVATE_KEY=tu_clave_wompi_privada
+cp backend/.env.docker.example backend/.env.docker
+# Windows PowerShell:
+# Copy-Item backend/.env.docker.example backend/.env.docker
 
 # 3. Levantar todos los servicios con un solo comando
 docker compose up --build
 
 # 4. Acceder a la aplicación
-# Frontend:                   http://localhost:3000
-# API core-service (Swagger):  http://localhost:8000/docs
-# API ai-service  (Swagger):   http://localhost:8001/docs
+# API backend:                http://localhost:8000
+# API backend (Swagger):      http://localhost:8000/docs
 ```
 
 **Servicios levantados:**
 
 | Servicio | Puerto | Descripción |
 |---|---|---|
-| `frontend` | 3000 | Aplicación web Next.js |
-| `core-service` | 8000 | API principal (auth, productos, órdenes) |
-| `ai-service` | 8001 | API de IA (chatbot, recomendaciones) |
-| `postgres` | 5432 | PostgreSQL 15 + pgvector |
+| `backend` | 8000 | API FastAPI |
+| `postgres` | 5432 | PostgreSQL 15 |
 | `redis` | 6379 | Redis — caché NoSQL |
 
 ```bash
@@ -199,44 +179,18 @@ docker compose down
 
 ## 💻 Instalación Local (Desarrollo)
 
-### Backend — core-service
+### Backend
 
 ```bash
-cd backend/core-service
+cd backend
 
-python3.12 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+python3.12 -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 
-pip install -r requirements.txt
-cp .env.example .env            # Completar variables
+pip install -e ".[dev]"
+cp .env.example .env            # Windows PowerShell: Copy-Item .env.example .env
 
-alembic upgrade head            # Ejecutar migraciones
 uvicorn src.main:app --reload --port 8000
-```
-
-### Backend — ai-service
-
-```bash
-cd backend/ai-service
-
-python3.12 -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-cp .env.example .env
-
-uvicorn src.main:app --reload --port 8001
-```
-
-### Frontend
-
-```bash
-cd frontend
-
-npm install
-cp .env.example .env.local     # Completar variables
-
-npm run dev                    # http://localhost:3000
 ```
 
 ---
@@ -276,7 +230,8 @@ git checkout develop && git pull origin develop
 git checkout -b feature/descripcion-corta
 
 # 2. Hacer cambios y ejecutar tests
-pytest backend/core-service/tests/ --cov=src --cov-fail-under=75
+cd backend
+pytest tests/ --cov=src
 
 # 3. Commit con formato convencional
 git commit -m "feat(products): add category filter endpoint"
@@ -307,7 +262,7 @@ Los PRs deben pasar todos los status checks de CI antes de ser mergeados.
 
 - **[docs/entrega1.md](docs/entrega1.md)**: Documento de primera entrega — requisitos y arquitectura completa
 - **[docs/architecture/](docs/architecture/)**: Diagramas C4 (PlantUML) y vista C&C
-- **API Docs (local)**: [http://localhost:8000/docs](http://localhost:8000/docs) · [http://localhost:8001/docs](http://localhost:8001/docs)
+- **API Docs (local)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 

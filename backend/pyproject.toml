@@ -2,7 +2,7 @@
 name = "ecommerce-backend"
 version = "0.1.0"
 description = "E-commerce B2C Colombia — Backend API"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
 dependencies = [
     # Web framework

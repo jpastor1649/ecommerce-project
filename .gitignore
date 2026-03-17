@@ -226,6 +226,8 @@ pnpm-debug.log*
 .env.production
 .env.staging
 *.env
+.env.docker
+.env.docker.local
 
 # Docker
 *.log

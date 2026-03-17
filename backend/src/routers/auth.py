@@ -20,7 +20,7 @@ async def register_user(user: UserRegister, db=Depends(get_db)):
     user_information = {
         "full_name": user.full_name,
         "email": user.email,
-        "password_hash": password_hash,
+        "hashed_password": password_hash,
     }
     new_user = User(**user_information)
     db.add(new_user)
