@@ -1,9 +1,11 @@
-from core.database import AsyncSessionLocal
+"""Dependency function to get a database session."""
+
+from src.core.database import async_session_local
 
 
 async def get_db():
     """Dependency function to get a database session."""
-    db = AsyncSessionLocal()
+    db = async_session_local()
     try:
         yield db
     finally:

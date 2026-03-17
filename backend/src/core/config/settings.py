@@ -1,8 +1,11 @@
 """Application configuration settings."""
+
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     """Application configuration settings."""
+
     # Base de datos
     database_url: str
 
@@ -22,6 +25,9 @@ class Settings(BaseSettings):
     debug: bool = False
 
     class Config:
+        """Pydantic settings source configuration."""
+
         env_file = ".env"
+
 
 settings = Settings()

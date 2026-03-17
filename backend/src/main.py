@@ -1,8 +1,10 @@
+"""Main application entry point for the FastAPI backend."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.config.settings import settings
-from routers.auth import router as auth_router
+from src.core.config.settings import settings
+from src.routers.auth import router as auth_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -24,4 +26,5 @@ app.include_router(auth_router)
 
 @app.get("/health")
 async def health_check():
+    """Endpoint to check the health of the application."""
     return {"status": "ok", "service": settings.app_name}
