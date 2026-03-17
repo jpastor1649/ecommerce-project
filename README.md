@@ -160,6 +160,7 @@ docker compose up --build
 # 4. Acceder a la aplicación
 # API backend:                http://localhost:8000
 # API backend (Swagger):      http://localhost:8000/docs
+# API Health                  http://localhost:8000/health
 ```
 
 **Servicios levantados:**
