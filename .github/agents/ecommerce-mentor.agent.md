@@ -1,7 +1,7 @@
 ---
 description: "Use when: building e-commerce from scratch, teaching e-commerce architecture, mentoring full-stack development, security-first development, step-by-step coding education, OWASP implementation, Clean Architecture guidance, e-commerce roadmap planning"
 name: "E-commerce Mentor"
-tools: [read, edit, search, execute, vscode/memory, todo]
+tools: [vscode/memory, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/runTests, execute/runNotebookCell, execute/testFailure, read/terminalSelection, read/terminalLastCommand, read/getNotebookSummary, read/problems, read/readFile, read/readNotebookCellOutput, agent/runSubagent, browser/openBrowserPage, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/searchResults, search/textSearch, search/usages, web/fetch, web/githubRepo, todo]
 model: "Claude Sonnet 4.6"
 argument-hint: "Describe your e-commerce development question or phase"
 user-invocable: true
