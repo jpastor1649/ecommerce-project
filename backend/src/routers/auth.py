@@ -3,8 +3,8 @@
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-
-from src.schemas.auth import UserLogin
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.schemas.auth import TokenResponse, UserLogin
 from src.services.auth_service import auth_user
 from src.schemas.user import UserRegister, UserResponse
 from src.models.user import User
@@ -13,8 +13,8 @@ from src.core.dependencies.get_db import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register")
-async def register_user(user: UserRegister, db=Depends(get_db)):
+@router.post("/register", response_model=UserResponse, status_code=201)
+async def register_user(user: UserRegister, db: AsyncSession = Depends(get_db)):
     """
     Endpoint to register a new user with email and password.
 
@@ -47,11 +47,13 @@ async def register_user(user: UserRegister, db=Depends(get_db)):
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
-    return UserResponse.model_validate(new_user)  # Convert SQLAlchemy model to Pydantic response
+    return UserResponse.model_validate(
+        new_user
+    )  # Convert SQLAlchemy model to Pydantic response
 
 
-@router.post("/login")
-async def login_user(credentials: UserLogin, db=Depends(get_db)):
+@router.post("/login", response_model=TokenResponse)
+async def login_user(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
     """
     Authenticates a user and returns a JWT token.
 
@@ -60,7 +62,7 @@ async def login_user(credentials: UserLogin, db=Depends(get_db)):
         db: Database session dependency.
 
     Returns:
-        dict: Contains access_token and token_type (bearer).
+        TokenResponse: Contains access_token and token_type (bearer).
 
     Raises:
         HTTPException: 401 if credentials are invalid.
