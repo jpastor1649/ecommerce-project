@@ -16,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register_user(user: UserRegister, db=Depends(get_db)):
     """Endpoint to register a new user."""
     # Registration logic goes here
-    password_hash = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt())
+    password_hash = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode("utf-8")
     user_information = {
         "full_name": user.full_name,
         "email": user.email,
