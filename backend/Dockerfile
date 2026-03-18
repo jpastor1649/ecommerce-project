@@ -5,10 +5,10 @@ WORKDIR /app
 COPY pyproject.toml .
 
 RUN pip install --upgrade pip && \
-    pip install fastapi uvicorn[standard] pydantic pydantic-settings \
+    pip install fastapi uvicorn[standard] pydantic[email] pydantic-settings \
     sqlalchemy asyncpg alembic redis python-jose[cryptography] \
     bcrypt python-multipart httpx resend supabase \
-    python-slugify pillow google-generativeai
+    python-slugify pillow google-generativeai email-validator
 
 COPY . .
 
