@@ -4,6 +4,7 @@ import bcrypt
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from jose import jwt
+from datetime import datetime, timedelta
 
 from src.models.user import User
 from src.core.config.settings import settings
@@ -24,7 +25,12 @@ async def auth_user(email: str, password: str, db):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
     # Generate and return token
-    token = jwt.encode(
-        {"sub": str(user.id)}, settings.jwt_secret, algorithm=settings.jwt_algorithm
-    )
+    now = datetime.utcnow()
+    expire = now + timedelta(minutes=settings.jwt_expire_minutes)
+    payload = {
+        "sub": str(user.id),
+        "iat": now,
+        "exp": expire,
+    }
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return {"access_token": token, "token_type": "bearer"}
