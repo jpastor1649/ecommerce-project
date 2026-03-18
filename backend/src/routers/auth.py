@@ -41,7 +41,7 @@ async def register_user(user: UserRegister, db: AsyncSession = Depends(get_db)):
     try:
         await db.commit()
         await db.refresh(new_user)
-    except IntegrityError:  # if email already exists, rollback and raise 409
+    except IntegrityError as exc:  # if email already exists, rollback and raise 409
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

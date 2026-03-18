@@ -34,7 +34,8 @@ class Category(Base):
         slug: URL-friendly identifier (unique, required).
         description: Category description (optional).
         image_url: URL to category image (optional).
-        parent_id: Parent category for hierarchical structure (optional, self-referential).
+        parent_id: Parent category for hierarchical structure
+        (optional, self-referential).
         is_active: Whether category is visible (default: True).
         products: Relationship to products in this category.
 

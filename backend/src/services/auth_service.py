@@ -9,6 +9,9 @@ from datetime import datetime, timedelta, timezone
 from src.models.user import User
 from src.core.config.settings import settings
 
+from src.core.config.settings import settings
+from src.models.user import User
+
 
 async def auth_user(email: str, password: str, db):
     """

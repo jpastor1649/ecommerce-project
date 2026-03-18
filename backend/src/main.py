@@ -14,17 +14,14 @@ from src.core.database import engine
 from src.models.base import Base
 from src.routers.auth import router as auth_router
 
-# Import models to register them with Base.metadata
-import src.models  # noqa: F401
-
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan():
     """
     Manages application lifecycle events (startup and shutdown).
 
     Args:
-        app: FastAPI application instance.
+        none
 
     Yields:
         None: Control returns to FastAPI framework.
