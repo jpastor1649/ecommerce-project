@@ -41,13 +41,15 @@ async def register_user(user: UserRegister, db=Depends(get_db)):
     try:
         await db.commit()
         await db.refresh(new_user)
-    except IntegrityError:  # if email already exists, rollback and raise 409
+    except IntegrityError as exc:  # if email already exists, rollback and raise 409
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
-        )
-    return UserResponse.model_validate(new_user)  # Convert SQLAlchemy model to Pydantic response
+        ) from exc
+    return UserResponse.model_validate(
+        new_user
+    )  # Convert SQLAlchemy model to Pydantic response
 
 
 @router.post("/login")

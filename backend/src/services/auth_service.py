@@ -1,13 +1,14 @@
 """Authentication service for user login and token generation."""
 
-import bcrypt
-from fastapi import HTTPException, status
-from sqlalchemy import select
-from jose import jwt
 from datetime import datetime, timedelta
 
-from src.models.user import User
+import bcrypt
+from fastapi import HTTPException, status
+from jose import jwt
+from sqlalchemy import select
+
 from src.core.config.settings import settings
+from src.models.user import User
 
 
 async def auth_user(email: str, password: str, db):
