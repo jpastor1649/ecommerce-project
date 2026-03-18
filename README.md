@@ -180,20 +180,60 @@ docker compose down
 
 ## 💻 Instalación Local (Desarrollo)
 
-### Backend
+### Opción A: Con Docker Compose (Recomendado - Sin configurar dependencias)
+
+**Ventajas:**
+- ✅ Sin instalar PostgreSQL, Redis (Docker se encarga)
+- ✅ Mismo entorno que producción
+- ✅ Una sola línea para levantar todo
+- ✅ Código hot-reload incluido
 
 ```bash
-cd backend
+# 1. Navega a la carpeta raíz del proyecto
+cd ecommerce-project
 
-python3.12 -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
+# 2. Copia el archivo de configuración (Windows PowerShell)
+Copy-Item backend\.env.docker.example backend\.env.docker
 
-pip install -e ".[dev]"
-cp .env.example .env            # Windows PowerShell: Copy-Item .env.example .env
+# 3. Asegúrate que Docker Desktop está corriendo
+#    (abre Docker Desktop desde Windows o espera a que se inicie automáticamente)
 
-uvicorn src.main:app --reload --port 8000
+# 4. Levanta todos los servicios
+docker-compose up --build -d
+
+# 5. Verifica que los servicios están corriendo
+docker-compose ps
+
+# Output esperado:
+# NAME                COMMAND             STATUS
+# ecommerce-backend   uvicorn ...         Up (healthy)
+# postgres            postgres            Up (healthy)
+# redis               redis-server        Up
 ```
 
+**Acceder a la aplicación:**
+- 🔗 **Backend API**: http://localhost:8000
+- 📚 **API Docs (Swagger)**: http://localhost:8000/docs
+- 💚 **Health Check**: http://localhost:8000/health
+- 🐘 **PostgreSQL**: localhost:5432 (usuario: postgres, contraseña: postgres)
+- 🔴 **Redis**: localhost:6379
+
+**Ver logs en tiempo real:**
+```bash
+# Backend
+docker-compose logs -f backend
+
+# O todos los servicios
+docker-compose logs -f
+```
+
+**Detener servicios:**
+```bash
+docker-compose down
+
+# Si quieres eliminar volúmenes (limpiar BD)
+docker-compose down -v
+```
 ---
 
 ## 📋 Requerimientos
@@ -225,24 +265,301 @@ uvicorn src.main:app --reload --port 8000
 
 ## 🤝 Contribución
 
-```bash
-# 1. Crear rama desde develop
-git checkout develop && git pull origin develop
-git checkout -b feature/descripcion-corta
+### 📌 Estrategia de Ramas (Git Flow Simplificado)
 
-# 2. Hacer cambios y ejecutar tests
-cd backend
-pytest tests/ --cov=src
+Usamos un modelo de branching que separa **desarrollo** de **producción:**
 
-# 3. Commit con formato convencional
-git commit -m "feat(products): add category filter endpoint"
-
-# 4. Push y abrir Pull Request
-git push -u origin feature/descripcion-corta
+```
+┌─────────────────────────────────────────────────────────────┐
+│ RAMA: main                                                  │
+│ ✅ Producción lista para deploy                            │
+│ 📌 Solo versiones/releases completados (MVP validados)    │
+│ 🔒 Protegida - requiere PR reviewado + CI pass            │
+└─────────────────────────────────────────────────────────────┘
+                            ↑
+                    (merge cuando MVP completo)
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│ RAMA: develop                                               │
+│ 🔄 Integración continua de features                        │
+│ ✨ Rama "maestra" de desarrollo                            │
+│ 🧪 Aquí se prueban todas las features antes de producción  │
+└─────────────────────────────────────────────────────────────┘
+       ↑                    ↑                    ↑
+       │                    │                    │
+  feature/auth          feature/products    feature/ui
+  feature/payments      feature/cart        bugfix/auth-token
 ```
 
-Los PRs deben pasar todos los status checks de CI antes de ser mergeados.
+### 🚀 Flujo de Trabajo: Paso a Paso
 
+#### 1️⃣ **Crear una Feature**
+
+```bash
+# Asegúrate estar sincronizado con develop
+git checkout develop
+git pull origin develop
+
+# Crea una rama para tu feature
+# Formato: feature/nombre-corto o bugfix/nombre-corto
+git checkout -b feature/agregar-filtro-productos
+
+# O para bugs:
+git checkout -b bugfix/arreglar-login
+```
+
+#### 2️⃣ **Desarrollar localmente**
+
+```bash
+# Levanta los servicios (Docker Compose - Opción A)
+docker-compose up --build -d
+
+# O instalación manual (Opción B)
+cd backend
+.venv\Scripts\Activate.ps1
+uvicorn src.main:app --reload
+
+# Haz cambios en el código...
+# El servidor se recarga automáticamente (--reload)
+```
+
+#### 3️⃣ **Ejecuta tests y validaciones**
+
+```bash
+# Tests unitarios
+cd backend
+pytest tests/ -v
+
+# Con cobertura
+pytest tests/ --cov=src --cov-report=html
+
+# Linting (verificar estilo de código)
+black src/  # Formatea automáticamente
+pylint src/
+```
+
+#### 4️⃣ **Commit con formato convencional**
+
+Usamos [Conventional Commits](https://www.conventionalcommits.org/) para claridad:
+
+```bash
+# Formato: type(scope): mensaje
+
+git add .
+
+# Feature nueva
+git commit -m "feat(products): agregar filtro por categoría"
+
+# Bug fix
+git commit -m "fix(auth): resolver token expirado incorrectamente"
+
+# Mejora o refactor
+git commit -m "refactor(database): optimizar query de productos"
+
+# Documentación
+git commit -m "docs(readme): agregar instalación con Docker"
+```
+
+**Tipos válidos:** `feat` | `fix` | `refactor` | `docs` | `test` | `style` | `chore`
+
+#### 5️⃣ **Push y abrir Pull Request**
+
+```bash
+# Sube tu rama
+git push -u origin feature/agregar-filtro-productos
+
+# Luego:
+# 1. Ve a GitHub → tu fork/repo
+# 2. Haz click en "Compare & Pull Request"
+# 3. Asegúrate que:
+#    ✅ Base branch: develop 
+#    ✅ Head branch: feature/tu-rama
+# 4. Escribe descripción clara del cambio
+# 5. Clic en "Create Pull Request"
+```
+
+**Descripción del PR:**
+```markdown
+## Descripción
+Agrega filtro de productos por categoría en el endpoint `/products`
+
+## Cambios
+- ✨ Nuevo parámetro `category` en GET /products
+- 🧪 Tests para filtro con 3+ casos
+- 📝 Docs actualizada en Swagger
+
+## Testing
+- [x] Tests pasando (`pytest`)
+- [x] Linting limpio (`black`, `pylint`)
+- [x] Manual testing en `http://localhost:8000/docs`
+
+Fixes #123 (número del issue, si aplica)
+```
+
+#### 6️⃣ **Code Review y Merge**
+
+El PR pasará automáticamente:
+- ✅ **lint.yml** — verifica formato (Black, Flake8)
+- ✅ **test.yml** — ejecuta tests (pytest con cobertura ≥80%)
+- ✅ **docker.yml** — valida build de imagen Docker
+
+Si todo pasa:
+1. Un mantainer revisa el código
+2. Se aprueba el PR
+3. **Merges a develop** (lista para siguiente release)
+
+---
+
+### ✅ Checklist antes de hacer Push
+
+```bash
+# 1. Tests están pasando
+cd backend && pytest tests/ --cov=src
+✅ Pass
+
+# 2. Código está formateado
+black src/
+✅ OK
+
+# 3. Sin errores de linting
+pylint src/
+✅ OK
+
+# 4. Sin cambios sin commitear
+git status
+✅ clean
+
+# 5. Commits con mensaje claro
+git log --oneline -3
+✅ feat(products): agregar filtro
+✅ test(products): casos de filtro
+✅ docs(readme): actualizar ejemplos
+```
+
+---
+
+### 🚨 Reglas Importantes
+
+| Regla | Detalles |
+|-------|----------|
+| **main → producción únicamente** | Solo merges cuando hay MVP completado y testeable |
+| **develop → rama de integración** | Todos los features se mergen aquí primero |
+| **NO commits directos a main/develop** | Siempre via Pull Request |
+| **Nombra ramas claramente** | `feature/xxx`, `bugfix/xxx`, `docs/xxx` |
+| **Tests obligatorios** | CI falla si tests no pasan (bloquea el merge) |
+| **Squash opcional** | Si tu rama tiene 5+ commits, considera squash antes de merge |
+
+---
+
+### 📚 Ejemplo Completo (Real)
+
+```bash
+# 1. Sincronizar con develop
+git checkout develop && git pull origin develop
+
+# 2. Crear rama
+git checkout -b feature/carrito-persistente
+
+# 3. Desarrollar + testear
+cd backend
+.venv\Scripts\Activate.ps1
+uvicorn src.main:app --reload
+# ... código ...
+pytest tests/ --cov=src  # Verde ✅
+
+# 4. Commits limpios
+git add src/services/cart_service.py
+git commit -m "feat(cart): persistencia con Redis"
+git add src/routers/cart.py
+git commit -m "feat(cart): nuevos endpoints GET/POST/DELETE"
+git add tests/test_cart.py
+git commit -m "test(cart): 15 casos de prueba"
+
+# 5. Push
+git push -u origin feature/carrito-persistente
+
+# 6. GitHub: Create Pull Request
+#    - Base: develop ✅
+#    - Head: feature/carrito-persistente ✅
+#    - CI checks pass ✅
+#    - Merge by maintainer ✅
+#    - Delete branch after merge ✅
+```
+
+---
+
+### ✅ Status Checks Automáticos (CI/CD)
+
+Cuando haces **push o abres un PR**, GitHub ejecuta automáticamente estos checks:
+
+#### 1️⃣ **Lint** (`lint.yml`)
+
+```yaml
+Ejecuta:
+  - black --check src/        # Verifica formato PEP8
+  - pylint src/               # Revisa errores y posibles mejoras
+
+Falla si:
+  ❌ Código mal formateado
+  ❌ Variables sin usar
+  ❌ Imports innecesarios
+
+Fix rápido (en tu máquina):
+  cd backend
+  black src/                  # Formatea automáticamente
+  git add . && git commit --amend --no-edit && git push --force
+```
+
+#### 2️⃣ **Tests** (`test.yml`)
+
+```yaml
+Ejecuta:
+  - pytest tests/              # Tests unitarios
+  - --cov=src                  # Calcula cobertura
+
+Falla si:
+  ❌ Un test no pasa
+  ❌ Errores en fixtures
+
+Variables de entorno (automáticas en CI):
+  DATABASE_URL: postgresql+asyncpg://test:test@localhost/test
+  JWT_SECRET: test-secret-key
+  GEMINI_API_KEY: (vacía para tests)
+```
+
+#### 3️⃣ **Docker Build** (`docker.yml`)
+
+```yaml
+Ejecuta (solo en main):
+  - docker build -t ecommerce-backend:latest backend/
+
+Falla si:
+  ❌ Dockerfile tiene errores
+  ❌ Missing dependencies
+```
+
+#### Status en el PR
+
+Después de hacer push, verás en tu PR:
+
+```
+✅ All checks passed
+  ✓ Lint (pylint + black)
+  ✓ Tests (pytest)
+  ✓ Docker Build (si es main)
+  
+→ PR puede ser mergeado
+```
+
+Si falla:
+```
+❌ Some checks failed
+  ✗ Lint:  Variables sin usar en src/services/auth_service.py:42
+  → click "Details" para ver log completo
+  → Arregla localamente y haz git push
+```
+
+---
 ---
 
 ## 👥 Equipo

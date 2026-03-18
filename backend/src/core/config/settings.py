@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     database_url: str
 
     # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str
 
     # JWT
     jwt_secret: str

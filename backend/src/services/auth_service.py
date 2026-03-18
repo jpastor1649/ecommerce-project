@@ -1,6 +1,6 @@
 """Authentication service for user login and token generation."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from fastapi import HTTPException, status
@@ -39,7 +39,7 @@ async def auth_user(email: str, password: str, db):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
     # Generate and return token
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expire = now + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {
         "sub": str(user.id),
