@@ -40,7 +40,4 @@ class UserResponse(BaseModel):
     full_name: str
     email: str
 
-    class Config:
-        """Pydantic configuration to allow population by field name."""
-
-        from_attributes = True
+    model_config = {"from_attributes": True}  # ✅ Nuevo estándar
