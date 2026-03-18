@@ -190,7 +190,7 @@ docker compose down
 
 ```bash
 # 1. Navega a la carpeta raíz del proyecto
-cd c:\Users\tu-usuario\ruta\ecommerce-project
+cd ecommerce-project
 
 # 2. Copia el archivo de configuración (Windows PowerShell)
 Copy-Item backend\.env.docker.example backend\.env.docker
