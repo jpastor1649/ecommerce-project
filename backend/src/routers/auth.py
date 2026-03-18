@@ -1,7 +1,8 @@
 """Authentication router for user registration and login."""
 
 import bcrypt
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 
 from src.schemas.auth import UserLogin
 from src.services.auth_service import auth_user
@@ -24,8 +25,15 @@ async def register_user(user: UserRegister, db=Depends(get_db)):
     }
     new_user = User(**user_information)
     db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
+    try:
+        await db.commit()
+        await db.refresh(new_user)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists.",
+        )
     return UserResponse.model_validate(new_user)
 
 
