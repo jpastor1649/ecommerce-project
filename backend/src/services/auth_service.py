@@ -19,7 +19,7 @@ async def auth_user(email: str, password: str, db):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
     # Verify password using bcrypt
-    if not bcrypt.checkpw(password.encode(), user.password_hash.encode()):
+    if not bcrypt.checkpw(password.encode(), user.hashed_password.encode()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
