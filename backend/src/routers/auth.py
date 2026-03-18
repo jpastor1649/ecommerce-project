@@ -13,7 +13,7 @@ from src.core.dependencies.get_db import get_db
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserRegister, db: AsyncSession = Depends(get_db)):
     """
     Endpoint to register a new user with email and password.
