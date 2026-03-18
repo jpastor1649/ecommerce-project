@@ -13,10 +13,11 @@ from src.core.config.settings import settings
 from src.core.database import engine
 from src.models.base import Base
 from src.routers.auth import router as auth_router
+from src.routers.products import router as products_router
 
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(_app: FastAPI):
     """
     Manages application lifecycle events (startup and shutdown).
 
@@ -53,6 +54,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(products_router)
 
 
 @app.get("/health")
