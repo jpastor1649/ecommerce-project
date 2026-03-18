@@ -11,7 +11,20 @@ from src.core.config.settings import settings
 
 
 async def auth_user(email: str, password: str, db):
-    """Authenticate user and return a token."""
+    """
+    Authenticates user credentials and generates JWT token.
+
+    Args:
+        email: User email for lookup in database.
+        password: Plain text password to verify against hash.
+        db: Database session dependency.
+
+    Returns:
+        dict: Contains access_token and token_type (bearer).
+
+    Raises:
+        HTTPException: 401 if user not found or password is incorrect.
+    """
     # Authentication logic goes here
     select_user = await db.execute(select(User).where(User.email == email))
     user = select_user.scalars().first()

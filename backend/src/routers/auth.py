@@ -15,9 +15,22 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register")
 async def register_user(user: UserRegister, db=Depends(get_db)):
-    """Endpoint to register a new user."""
-    # Registration logic goes here
-    password_hash = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode("utf-8")
+    """
+    Endpoint to register a new user with email and password.
+
+    Args:
+        user: User registration data containing full_name, email, and password.
+        db: Database session dependency.
+
+    Returns:
+        UserResponse: Created user data (id, full_name, email).
+
+    Raises:
+        HTTPException: 409 if email already exists.
+    """
+    password_hash = bcrypt.hashpw(user.password.encode(), bcrypt.gensalt()).decode(
+        "utf-8"
+    )
     user_information = {
         "full_name": user.full_name,
         "email": user.email,
@@ -28,16 +41,28 @@ async def register_user(user: UserRegister, db=Depends(get_db)):
     try:
         await db.commit()
         await db.refresh(new_user)
-    except IntegrityError:
+    except IntegrityError:  # if email already exists, rollback and raise 409
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
-    return UserResponse.model_validate(new_user)
+    return UserResponse.model_validate(new_user)  # Convert SQLAlchemy model to Pydantic response
 
 
 @router.post("/login")
 async def login_user(credentials: UserLogin, db=Depends(get_db)):
-    """Endpoint to authenticate a user and return a token."""
+    """
+    Authenticates a user and returns a JWT token.
+
+    Args:
+        credentials: User login data containing email and password.
+        db: Database session dependency.
+
+    Returns:
+        dict: Contains access_token and token_type (bearer).
+
+    Raises:
+        HTTPException: 401 if credentials are invalid.
+    """
     return await auth_user(credentials.email, credentials.password, db)

@@ -1,4 +1,7 @@
-"""Product and Category models for the e-commerce application."""
+"""Product and Category models for the e-commerce application.
+
+Represents catalog entities with hierarchical categories and product inventory.
+"""
 
 from __future__ import annotations
 
@@ -22,7 +25,22 @@ from src.models.base import Base
 
 
 class Category(Base):
-    """Category model representing product categories."""
+    """
+    Represents a product category in the catalog.
+
+    Attributes:
+        id: Unique category identifier (UUID).
+        name: Category name (unique, required).
+        slug: URL-friendly identifier (unique, required).
+        description: Category description (optional).
+        image_url: URL to category image (optional).
+        parent_id: Parent category for hierarchical structure (optional, self-referential).
+        is_active: Whether category is visible (default: True).
+        products: Relationship to products in this category.
+
+    Note:
+        Supports nested categories via parent_id for flexible taxonomy.
+    """
 
     __tablename__ = "categories"
 
@@ -45,7 +63,26 @@ class Category(Base):
 
 
 class Product(Base):
-    """Product model representing items for sale."""
+    """
+    Represents a product in the catalog.
+
+    Attributes:
+        id: Unique product identifier (UUID).
+        category_id: Foreign key to Category (required).
+        name: Product name (required).
+        slug: URL-friendly identifier (unique, required).
+        description: Detailed product description (optional).
+        price: Product price in COP (Numeric 12,2).
+        stock: Current inventory count (default: 0).
+        is_active: Whether product is available for sale (default: True).
+        created_at: Timestamp of product creation (auto-generated).
+        updated_at: Timestamp of last update (auto-generated).
+        category: Relationship to Category model.
+
+    Note:
+        Prices are stored as Numeric(12,2) for precision (no float rounding errors).
+        Slug must be unique for clean URL generation.
+    """
 
     __tablename__ = "products"
 

@@ -1,4 +1,7 @@
-"""User model for the e-commerce application."""
+"""User model for the e-commerce application.
+
+Represents application users with authentication, profile, and audit information.
+"""
 
 import uuid
 from datetime import datetime
@@ -10,7 +13,25 @@ from src.models.base import Base
 
 
 class User(Base):
-    """User model representing application users."""
+    """
+    Represents an application user account.
+
+    Attributes:
+        id: Unique user identifier (UUID).
+        email: User email address (unique, required).
+        hashed_password: Bcrypt-hashed password (never store plaintext).
+        full_name: User's full name (optional).
+        phone: User's phone number (optional).
+        role: User role for authorization (default: "user").
+        avatar_url: URL to user's avatar image (optional).
+        is_active: Whether user account is enabled (default: True).
+        created_at: Timestamp of account creation (auto-generated).
+        updated_at: Timestamp of last update (auto-generated).
+
+    Note:
+        Email constraint is UNIQUE at database level to prevent duplicates.
+        Passwords are never stored; only bcrypt hashes are persisted.
+    """
 
     __tablename__ = "users"
 
