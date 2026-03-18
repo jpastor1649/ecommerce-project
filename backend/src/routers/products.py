@@ -30,7 +30,7 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
     if not product:
-        from fastapi import HTTPException
+        from fastapi import APIRouter, Depends, HTTPException, Query
 
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return product

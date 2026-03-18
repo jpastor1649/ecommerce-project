@@ -7,7 +7,7 @@ from src.routers import auth, products
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Crea las tablas en la base de datos al iniciar."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
