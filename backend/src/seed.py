@@ -1,7 +1,6 @@
 """Script para poblar la base de datos con productos de prueba."""
 
 import asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import AsyncSessionLocal, engine, Base
 from src.models.product import Product
 
