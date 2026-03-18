@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     database_url: str
 
     # Redis
-    redis_url: str 
+    redis_url: str
 
     # JWT
     jwt_secret: str

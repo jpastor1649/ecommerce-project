@@ -1,13 +1,11 @@
 """Authentication service for user login and token generation."""
 
-import bcrypt
-from fastapi import HTTPException, status
-from sqlalchemy import select
-from jose import jwt
 from datetime import datetime, timedelta, timezone
 
-from src.models.user import User
-from src.core.config.settings import settings
+import bcrypt
+from fastapi import HTTPException, status
+from jose import jwt
+from sqlalchemy import select
 
 from src.core.config.settings import settings
 from src.models.user import User
