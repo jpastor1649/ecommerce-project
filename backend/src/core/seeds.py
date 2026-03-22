@@ -85,7 +85,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             slug="wireless-bluetooth-headphones",
             description="High-quality Bluetooth headphones with active noise cancellation, "
             "30-hour battery life, and premium sound quality.",
-            price=Decimal("149.99"),,
+            price=Decimal("149.99"),
             stock=25,
             is_active=True,
         ),
