@@ -32,7 +32,7 @@ async def register_user(user: UserRegister, db: AsyncSession) -> UserResponse:
     try:
         # Validate email format (raises ValueError if invalid)
         email_vo = Email(user.email)
-        
+
         # Validate password strength and hash it (raises ValueError if weak)
         password_vo = Password(user.password)
     except ValueError as exc:
@@ -41,7 +41,7 @@ async def register_user(user: UserRegister, db: AsyncSession) -> UserResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
-    
+
     # Create new user with validated data
     user_information = {
         "full_name": user.full_name,
@@ -50,7 +50,7 @@ async def register_user(user: UserRegister, db: AsyncSession) -> UserResponse:
     }
     new_user = User(**user_information)
     db.add(new_user)
-    
+
     try:
         await db.commit()
         await db.refresh(new_user)
@@ -61,7 +61,7 @@ async def register_user(user: UserRegister, db: AsyncSession) -> UserResponse:
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         ) from exc
-    
+
     # Convert SQLAlchemy model to Pydantic response
     return UserResponse.model_validate(new_user)
 
@@ -84,18 +84,18 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
     # Find user by email
     select_user = await db.execute(select(User).where(User.email == email))
     user = select_user.scalars().first()
-    
+
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials (user not found)",
         )
-    
+
     # Verify password using Password VO
     try:
         password_vo = Password.__new__(Password)
         password_vo._hash = user.hashed_password
-        
+
         if not password_vo.verify(password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -108,7 +108,7 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
         ) from exc
-    
+
     # Generate and return JWT token
     now = datetime.now(timezone.utc)
     expire = now + timedelta(minutes=settings.jwt_expire_minutes)

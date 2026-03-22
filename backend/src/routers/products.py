@@ -31,7 +31,12 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
 
 @router.get("/search", response_model=list[ProductResponse])
 async def search_products(
-    q: str = Query(..., min_length=1, max_length=100, description="Search query (name or description)"),
+    q: str = Query(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Search query (name or description)",
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """

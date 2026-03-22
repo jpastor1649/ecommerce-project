@@ -67,7 +67,8 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=electronics_category.id,
             name="Wireless Bluetooth Headphones",
             slug="wireless-bluetooth-headphones",
-            description="High-quality Bluetooth headphones with active noise cancellation, 30-hour battery life, and premium sound quality.",
+            description="High-quality Bluetooth headphones with active noise cancellation, "
+            "30-hour battery life, and premium sound quality.",
             price=149.99,
             stock=25,
             is_active=True,
@@ -95,7 +96,8 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=clothing_category.id,
             name="100% Cotton Premium T-Shirt",
             slug="cotton-premium-tshirt",
-            description="Comfortable and breathable 100% cotton t-shirt, available in multiple colors and sizes for all body types.",
+            description="Comfortable and breathable 100% cotton t-shirt, " \
+            "available in multiple colors and sizes for all body types.",
             price=29.99,
             stock=50,
             is_active=True,
@@ -113,7 +115,8 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=clothing_category.id,
             name="Casual Sports Running Shoes",
             slug="casual-sports-running-shoes",
-            description="Lightweight and comfortable running shoes with anti-slip soles and breathable material for daily wear.",
+            description="Lightweight and comfortable running shoes with anti-slip soles "
+            "and breathable material for daily wear.",
             price=89.99,
             stock=40,
             is_active=True,
@@ -123,7 +126,8 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=home_category.id,
             name="Adjustable Aluminum Phone Stand",
             slug="adjustable-aluminum-phone-stand",
-            description="Premium aluminum phone stand for desk or table, adjustable to any angle, compatible with all phones and tablets.",
+            description="Premium aluminum phone stand for desk or table, " \
+            "adjustable to any angle, compatible with all phones and tablets.",
             price=19.99,
             stock=60,
             is_active=True,
