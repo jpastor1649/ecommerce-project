@@ -1,7 +1,6 @@
 """Email Value Object - Encapsulates email validation and normalization."""
 
 import re
-from typing import Self
 
 
 class Email:
