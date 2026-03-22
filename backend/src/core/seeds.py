@@ -34,7 +34,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
     result = await db.execute(select(Product))
     if result.scalars().first():
         return  # Products already seeded, skip
-    
+
     # Create Categories
     category_data = [
         {
@@ -59,21 +59,21 @@ async def seed_initial_data(db: AsyncSession) -> None:
             "is_active": True,
         },
     ]
-    
+
     slugs = [c["slug"] for c in category_data]
     result = await db.execute(select(Category).where(Category.slug.in_(slugs)))
     existing_categories = {c.slug: c for c in result.scalars().all()}
     categories = {}
     for data in category_data:
         slug = data["slug"]
-        
+
         if slug in existing_categories:
             categories[slug] = existing_categories[slug]
         else:
             category = Category(**data)
             db.add(category)
             categories[slug] = category
-    
+
     await db.flush()
 
     # Create products
@@ -112,7 +112,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=clothing_category.id,
             name="100% Cotton Premium T-Shirt",
             slug="cotton-premium-tshirt",
-            description="Comfortable and breathable 100% cotton t-shirt, " \
+            description="Comfortable and breathable 100% cotton t-shirt, "
             "available in multiple colors and sizes for all body types.",
             price=Decimal("29.99"),
             stock=50,
@@ -142,7 +142,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=home_category.id,
             name="Adjustable Aluminum Phone Stand",
             slug="adjustable-aluminum-phone-stand",
-            description="Premium aluminum phone stand for desk or table, " \
+            description="Premium aluminum phone stand for desk or table, "
             "adjustable to any angle, compatible with all phones and tablets.",
             price=Decimal("19.99"),
             stock=60,

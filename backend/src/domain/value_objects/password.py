@@ -40,14 +40,15 @@ class Password:
         self._hash = bcrypt.hashpw(
             plain_password.encode("utf-8"), bcrypt.gensalt(rounds=12)
         ).decode("utf-8")
+
     @classmethod
     def from_hash(cls, hashed: str) -> "Password":
         """
         Create Password VO from an existing hash (e.g., from database).
-    
+
         Args:
             hashed: Bcrypt hashed password string
-    
+
         Returns:
             Password instance with existing hash
         """
