@@ -102,9 +102,7 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
 
     # Verify password using Password VO
     try:
-        password_vo = Password.__new__(Password)
-        password_vo._hash = user.hashed_password
-
+        password_vo = Password.from_hash(user.hashed_password)
         if not password_vo.verify(password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
