@@ -119,7 +119,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-           category_id=categories["clothing"].id,
+            category_id=categories["clothing"].id,
             name="Classic Blue Denim Jeans",
             slug="classic-blue-denim-jeans",
             description="Timeless blue denim jeans with regular fit, perfect for casual or smart-casual occasions.",
