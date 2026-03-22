@@ -80,7 +80,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
     products = [
         # Electronics
         Product(
-            category_id=electronics_category.id,
+            category_id=categories["electronics"].id,
             name="Wireless Bluetooth Headphones",
             slug="wireless-bluetooth-headphones",
             description="High-quality Bluetooth headphones with active noise cancellation, "
@@ -90,7 +90,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-            category_id=electronics_category.id,
+            category_id=categories["electronics"].id,
             name="USB-C Fast Charging Cable",
             slug="usb-c-fast-charging-cable",
             description="Durable 2-meter USB-C cable supporting fast charging (65W) and high-speed data transfer rates.",
@@ -99,7 +99,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-            category_id=electronics_category.id,
+            category_id=categories["electronics"].id,
             name="Portable Power Bank 20000mAh",
             slug="portable-power-bank-20000mah",
             description="Compact power bank with dual USB ports, 20000mAh capacity, LED display, and fast charging support.",
@@ -109,7 +109,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
         ),
         # Clothing
         Product(
-            category_id=clothing_category.id,
+            category_id=categories["clothing"].id,
             name="100% Cotton Premium T-Shirt",
             slug="cotton-premium-tshirt",
             description="Comfortable and breathable 100% cotton t-shirt, "
@@ -119,7 +119,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-            category_id=clothing_category.id,
+           category_id=categories["clothing"].id,
             name="Classic Blue Denim Jeans",
             slug="classic-blue-denim-jeans",
             description="Timeless blue denim jeans with regular fit, perfect for casual or smart-casual occasions.",
@@ -128,7 +128,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-            category_id=clothing_category.id,
+            category_id=categories["clothing"].id,
             name="Casual Sports Running Shoes",
             slug="casual-sports-running-shoes",
             description="Lightweight and comfortable running shoes with anti-slip soles "
@@ -139,7 +139,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
         ),
         # Home & Garden
         Product(
-            category_id=home_category.id,
+            category_id=categories["home-garden"].id,
             name="Adjustable Aluminum Phone Stand",
             slug="adjustable-aluminum-phone-stand",
             description="Premium aluminum phone stand for desk or table, "
@@ -149,7 +149,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-            category_id=home_category.id,
+            category_id=categories["home-garden"].id,
             name="LED Desk Lamp with USB Charging",
             slug="led-desk-lamp-usb-charging",
             description="Modern LED desk lamp with adjustable brightness, color temperature control, and built-in USB charging port.",
@@ -158,7 +158,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
-            category_id=home_category.id,
+            category_id=categories["home-garden"].id,
             name="Wooden Desk Organizer Set",
             slug="wooden-desk-organizer-set",
             description="Eco-friendly wooden desk organizer with multiple compartments for pens, papers, and office supplies.",
