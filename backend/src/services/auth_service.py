@@ -121,8 +121,8 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
     expire = now + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {
         "sub": str(user.id),
-        "iat": now,
-        "exp": expire,
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return {"access_token": token, "token_type": "bearer"}
