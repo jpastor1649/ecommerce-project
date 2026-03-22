@@ -6,6 +6,7 @@ on application startup. Seeds are idempotent (safe to run multiple times).
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from decimal import Decimal
 
 from src.models.product import Category, Product
 
@@ -33,32 +34,47 @@ async def seed_initial_data(db: AsyncSession) -> None:
     result = await db.execute(select(Product))
     if result.scalars().first():
         return  # Products already seeded, skip
-
-    # Create categories
-    electronics_category = Category(
-        name="Electronics",
-        slug="electronics",
-        description="Electronic devices and gadgets for modern life",
-        image_url="https://via.placeholder.com/300x200?text=Electronics",
-        is_active=True,
-    )
-    clothing_category = Category(
-        name="Clothing",
-        slug="clothing",
-        description="Apparel and fashion items for all seasons",
-        image_url="https://via.placeholder.com/300x200?text=Clothing",
-        is_active=True,
-    )
-    home_category = Category(
-        name="Home & Garden",
-        slug="home-garden",
-        description="Furniture and decoration for your home",
-        image_url="https://via.placeholder.com/300x200?text=Home",
-        is_active=True,
-    )
-
-    db.add_all([electronics_category, clothing_category, home_category])
-    await db.flush()  # Flush to get IDs without committing
+    
+    # Create Categories
+    category_data = [
+        {
+            "name": "Electronics",
+            "slug": "electronics",
+            "description": "Electronic devices and gadgets for modern life",
+            "image_url": "https://via.placeholder.com/300x200?text=Electronics",
+            "is_active": True,
+        },
+        {
+            "name": "Clothing",
+            "slug": "clothing",
+            "description": "Apparel and fashion items for all seasons",
+            "image_url": "https://via.placeholder.com/300x200?text=Clothing",
+            "is_active": True,
+        },
+        {
+            "name": "Home & Garden",
+            "slug": "home-garden",
+            "description": "Furniture and decoration for your home",
+            "image_url": "https://via.placeholder.com/300x200?text=Home",
+            "is_active": True,
+        },
+    ]
+    
+    slugs = [c["slug"] for c in category_data]
+    result = await db.execute(select(Category).where(Category.slug.in_(slugs)))
+    existing_categories = {c.slug: c for c in result.scalars().all()}
+    categories = {}
+    for data in category_data:
+        slug = data["slug"]
+        
+        if slug in existing_categories:
+            categories[slug] = existing_categories[slug]
+        else:
+            category = Category(**data)
+            db.add(category)
+            categories[slug] = category
+    
+    await db.flush()
 
     # Create products
     products = [
@@ -69,7 +85,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             slug="wireless-bluetooth-headphones",
             description="High-quality Bluetooth headphones with active noise cancellation, "
             "30-hour battery life, and premium sound quality.",
-            price=149.99,
+            price=Decimal("149.99"),,
             stock=25,
             is_active=True,
         ),
@@ -78,7 +94,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             name="USB-C Fast Charging Cable",
             slug="usb-c-fast-charging-cable",
             description="Durable 2-meter USB-C cable supporting fast charging (65W) and high-speed data transfer rates.",
-            price=14.99,
+            price=Decimal("14.99"),
             stock=100,
             is_active=True,
         ),
@@ -87,7 +103,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             name="Portable Power Bank 20000mAh",
             slug="portable-power-bank-20000mah",
             description="Compact power bank with dual USB ports, 20000mAh capacity, LED display, and fast charging support.",
-            price=39.99,
+            price=Decimal("39.99"),
             stock=50,
             is_active=True,
         ),
@@ -98,7 +114,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             slug="cotton-premium-tshirt",
             description="Comfortable and breathable 100% cotton t-shirt, " \
             "available in multiple colors and sizes for all body types.",
-            price=29.99,
+            price=Decimal("29.99"),
             stock=50,
             is_active=True,
         ),
@@ -107,7 +123,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             name="Classic Blue Denim Jeans",
             slug="classic-blue-denim-jeans",
             description="Timeless blue denim jeans with regular fit, perfect for casual or smart-casual occasions.",
-            price=79.99,
+            price=Decimal("79.99"),
             stock=30,
             is_active=True,
         ),
@@ -117,7 +133,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             slug="casual-sports-running-shoes",
             description="Lightweight and comfortable running shoes with anti-slip soles "
             "and breathable material for daily wear.",
-            price=89.99,
+            price=Decimal("89.99"),
             stock=40,
             is_active=True,
         ),
@@ -128,7 +144,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             slug="adjustable-aluminum-phone-stand",
             description="Premium aluminum phone stand for desk or table, " \
             "adjustable to any angle, compatible with all phones and tablets.",
-            price=19.99,
+            price=Decimal("19.99"),
             stock=60,
             is_active=True,
         ),
@@ -137,7 +153,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             name="LED Desk Lamp with USB Charging",
             slug="led-desk-lamp-usb-charging",
             description="Modern LED desk lamp with adjustable brightness, color temperature control, and built-in USB charging port.",
-            price=45.99,
+            price=Decimal("45.99"),
             stock=35,
             is_active=True,
         ),
@@ -146,7 +162,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             name="Wooden Desk Organizer Set",
             slug="wooden-desk-organizer-set",
             description="Eco-friendly wooden desk organizer with multiple compartments for pens, papers, and office supplies.",
-            price=34.99,
+            price=Decimal("34.99"),
             stock=45,
             is_active=True,
         ),
