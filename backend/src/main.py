@@ -10,7 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config.settings import settings
-from src.core.database import engine
+from src.core.database import engine, async_session_local
+from src.core.seeds import seed_initial_data
 from src.models.base import Base
 from src.routers.auth import router as auth_router
 from src.routers.products import router as products_router
@@ -22,17 +23,22 @@ async def lifespan(_app: FastAPI):
     Manages application lifecycle events (startup and shutdown).
 
     Args:
-        none
+        _app: FastAPI application instance.
 
     Yields:
         None: Control returns to FastAPI framework.
 
     Note:
-        - Startup: Creates database tables from SQLAlchemy models.
+        - Startup: Creates database tables from SQLAlchemy models and seeds initial data.
         - Shutdown: Disposes database engine and releases resources.
     """
+    # Initialize database tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Seed initial data (idempotent)
+    async with async_session_local() as db:
+        await seed_initial_data(db)
 
     yield  # App runs here
 
