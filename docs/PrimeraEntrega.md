@@ -22,7 +22,7 @@
 
 **Nombre:** *Nexora*
 
-**Logo:** *(Por agregar)*
+**Logo:** *![Vista de Componentes y Controladores](./Nexora.png)*
 
 **Descripción:**
 
