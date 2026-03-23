@@ -20,7 +20,7 @@
 
 ## Sistema de Software
 
-<h1 align="center">Nexora</h1>
+<h1 align="center">Noventra</h1>
 
 <p align="center">
   <img src="./Nexora.png" width="400">
