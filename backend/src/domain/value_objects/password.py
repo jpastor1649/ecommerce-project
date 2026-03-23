@@ -117,7 +117,7 @@ class Password:
 
     def __repr__(self) -> str:
         """Developer representation (never shows hash)."""
-        return f"Password(hash=***)"
+        return "Password(hash=***)"
 
     def __eq__(self, other: object) -> bool:
         """Compare password hashes."""
