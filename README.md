@@ -95,57 +95,55 @@
 ## 📁 Estructura del Proyecto
 
 ```
-E-commerce/
+ecommerce-project/
 │
-├── README.md                          # Este archivo
-├── LICENSE                            # MIT License
-├── .gitignore
-├── docker-compose.yml                 # Orquestación local completa
-├── .env.example                       # Template de variables de entorno
+├── README.md
+├── LICENSE
+├── .env.example
+├── docker-compose.yml
 │
 ├── .github/
+│   ├── agents/
 │   └── workflows/
-│       ├── lint.yml                   # ✅ Linting (Black, isort, Flake8 / ESLint)
-│       ├── test.yml                   # ✅ Tests unitarios + cobertura ≥75%
-│       └── docker.yml                 # ✅ Docker build validation
+│       ├── lint.yml
+│       ├── test.yml
+│       └── docker.yml
 │
-├── frontend/                          # Next.js 14 App Router
+├── backend/
+│   ├── DockerFile
+│   ├── .dockerignore
+│   ├── pyproject.toml
+│   ├── src/
+│   │   ├── main.py
+│   │   ├── core/
+│   │   │   ├── config/
+│   │   │   ├── dependencies/
+│   │   │   ├── database.py
+│   │   │   └── seeds.py
+│   │   ├── domain/
+│   │   │   └── value_objects/
+│   │   ├── models/
+│   │   ├── routers/
+│   │   ├── schemas/
+│   │   └── services/
+│   └── tests/
+│
+├── frontend/
 │   ├── Dockerfile
+│   ├── .dockerignore
 │   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
 │   └── src/
-│       ├── app/                       # Rutas (App Router)
-│       ├── components/                # Componentes reutilizables
-│       └── lib/                       # API clients, hooks, utils
-│
-├── backend/                           # Microservicios Python
-│   ├── core-service/                  # Auth, productos, órdenes, pagos
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   └── src/
-│   │       ├── main.py
-│   │       ├── routers/               # Endpoints FastAPI
-│   │       ├── services/              # Casos de uso
-│   │       ├── models/                # ORM SQLAlchemy
-│   │       └── schemas/               # Pydantic v2
-│   │
-│   └── ai-service/                    # Gemini, recomendaciones, búsqueda
-│       ├── Dockerfile
-│       ├── requirements.txt
-│       └── src/
-│           ├── main.py
-│           ├── routers/
-│           ├── services/
-│           └── adapters/              # GeminiAdapter, VectorRepository
+│       ├── App.jsx
+│       ├── main.jsx
+│       ├── assets/
+│       └── components/
 │
 └── docs/
-    ├── entrega1.md                    # Primera entrega Arquisoft
-    └── architecture/                  # Diagramas C4 (.puml) y C&C
-        ├── C4_L1_SystemContext.puml
-        ├── C4_L2_Container.puml
-        ├── C4_L3_Component_CoreService.puml
-        ├── C4_L3_Component_AIService.puml
-        ├── CleanArchitecture.puml
-        └── CC_View.puml
+  ├── entrega1.md
+  ├── architecture/
+  └── exports/
 ```
 
 ---
@@ -199,44 +197,85 @@ docker compose down
 
 ## 💻 Instalación Local (Desarrollo)
 
-### Backend — core-service
+### Opcion A: Docker Compose (recomendada para cualquier PC)
+
+1. Clona el repositorio:
 
 ```bash
-cd backend/core-service
-
-python3.12 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-pip install -r requirements.txt
-cp .env.example .env            # Completar variables
-
-alembic upgrade head            # Ejecutar migraciones
-uvicorn src.main:app --reload --port 8000
+git clone https://github.com/jpastor1649/ecommerce-project.git
+cd ecommerce-project
 ```
 
-### Backend — ai-service
+2. Crea archivo de variables:
+
+Windows (PowerShell):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+macOS/Linux:
 
 ```bash
-cd backend/ai-service
-
-python3.12 -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
 cp .env.example .env
+```
 
-uvicorn src.main:app --reload --port 8001
+3. Levanta servicios:
+
+```bash
+docker compose up --build
+```
+
+Si tu Docker usa binario legacy:
+
+```bash
+docker-compose up --build
+```
+
+4. Accesos locales:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Swagger: http://localhost:8000/docs
+
+### Opcion B: Sin Docker
+
+Requiere Python 3.12+, Node 20+, PostgreSQL y Redis ejecutandose localmente.
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+Activa el entorno virtual:
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Instala dependencias y ejecuta:
+
+```bash
+pip install --upgrade pip
+pip install .
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-
 npm install
-cp .env.example .env.local     # Completar variables
-
-npm run dev                    # http://localhost:3000
+npm run dev -- --host 0.0.0.0 --port 3000
 ```
 
 ---
@@ -271,12 +310,13 @@ npm run dev                    # http://localhost:3000
 ## 🤝 Contribución
 
 ```bash
-# 1. Crear rama desde develop
-git checkout develop && git pull origin develop
+# 1. Crear rama desde main actualizada
+git checkout main && git pull origin main
 git checkout -b feature/descripcion-corta
 
-# 2. Hacer cambios y ejecutar tests
-pytest backend/core-service/tests/ --cov=src --cov-fail-under=75
+# 2. Hacer cambios y validar
+cd backend && pytest
+cd ../frontend && npm run lint
 
 # 3. Commit con formato convencional
 git commit -m "feat(products): add category filter endpoint"
