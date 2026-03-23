@@ -3,10 +3,10 @@
 This module provides functions to populate the database with sample data
 on application startup. Seeds are idempotent (safe to run multiple times).
 """
+from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from decimal import Decimal
 
 from src.models.product import Category, Product
 
