@@ -95,41 +95,55 @@
 ## 📁 Estructura del Proyecto
 
 ```
-E-commerce/
+ecommerce-project/
 │
-├── README.md                          # Este archivo
-├── LICENSE                            # MIT License
-├── .gitignore
-├── docker-compose.yml                 # Orquestación local completa
+├── README.md
+├── LICENSE
+├── .env.example
+├── docker-compose.yml
 │
 ├── .github/
+│   ├── agents/
 │   └── workflows/
-│       ├── lint.yml                   # ✅ Linting (Black, isort, Flake8 / ESLint)
-│       ├── test.yml                   # ✅ Tests unitarios + cobertura ≥75%
-│       └── docker.yml                 # ✅ Docker build validation
+│       ├── lint.yml
+│       ├── test.yml
+│       └── docker.yml
 │
-├── backend/                           # Backend FastAPI actual
-│   ├── Dockerfile
+├── backend/
+│   ├── DockerFile
+│   ├── .dockerignore
 │   ├── pyproject.toml
-│   ├── .env.example                   # Variables para ejecución local
-│   ├── .env.docker.example            # Variables para Docker Compose
 │   ├── src/
 │   │   ├── main.py
-│   │   ├── routers/
-│   │   ├── services/
+│   │   ├── core/
+│   │   │   ├── config/
+│   │   │   ├── dependencies/
+│   │   │   ├── database.py
+│   │   │   └── seeds.py
+│   │   ├── domain/
+│   │   │   └── value_objects/
 │   │   ├── models/
-│   │   └── schemas/
+│   │   ├── routers/
+│   │   ├── schemas/
+│   │   └── services/
 │   └── tests/
 │
+├── frontend/
+│   ├── Dockerfile
+│   ├── .dockerignore
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   └── src/
+│       ├── App.jsx
+│       ├── main.jsx
+│       ├── assets/
+│       └── components/
+│
 └── docs/
-    ├── entrega1.md                    # Primera entrega Arquisoft
-    └── architecture/                  # Diagramas C4 (.puml) y C&C
-        ├── C4_L1_SystemContext.puml
-        ├── C4_L2_Container.puml
-        ├── C4_L3_Component_CoreService.puml
-        ├── C4_L3_Component_AIService.puml
-        ├── CleanArchitecture.puml
-        └── CC_View.puml
+  ├── entrega1.md
+  ├── architecture/
+  └── exports/
 ```
 
 ---
@@ -180,59 +194,84 @@ docker compose down
 
 ## 💻 Instalación Local (Desarrollo)
 
-### Opción A: Con Docker Compose (Recomendado - Sin configurar dependencias)
+### Opcion A: Docker Compose (recomendada para cualquier PC)
 
-**Ventajas:**
-- ✅ Sin instalar PostgreSQL, Redis (Docker se encarga)
-- ✅ Mismo entorno que producción
-- ✅ Una sola línea para levantar todo
-- ✅ Código hot-reload incluido
+1. Clona el repositorio:
 
 ```bash
-# 1. Navega a la carpeta raíz del proyecto
+git clone https://github.com/jpastor1649/ecommerce-project.git
 cd ecommerce-project
-
-# 2. Copia el archivo de configuración (Windows PowerShell)
-Copy-Item backend\.env.docker.example backend\.env.docker
-
-# 3. Asegúrate que Docker Desktop está corriendo
-#    (abre Docker Desktop desde Windows o espera a que se inicie automáticamente)
-
-# 4. Levanta todos los servicios
-docker-compose up --build -d
-
-# 5. Verifica que los servicios están corriendo
-docker-compose ps
-
-# Output esperado:
-# NAME                COMMAND             STATUS
-# ecommerce-backend   uvicorn ...         Up (healthy)
-# postgres            postgres            Up (healthy)
-# redis               redis-server        Up
 ```
 
-**Acceder a la aplicación:**
-- 🔗 **Backend API**: http://localhost:8000
-- 📚 **API Docs (Swagger)**: http://localhost:8000/docs
-- 💚 **Health Check**: http://localhost:8000/health
-- 🐘 **PostgreSQL**: localhost:5432 (usuario: postgres, contraseña: postgres)
-- 🔴 **Redis**: localhost:6379
+2. Crea archivo de variables:
 
-**Ver logs en tiempo real:**
+Windows (PowerShell):
+
+```powershell
+Copy-Item .env.example .env
+```
+
+macOS/Linux:
+
 ```bash
-# Backend
-docker-compose logs -f backend
+cp .env.example .env
+```
 
-# O todos los servicios
-docker-compose logs -f
+3. Levanta servicios:
+
+```bash
+docker compose up --build
+```
+
+Si tu Docker usa binario legacy:
+
+```bash
+docker-compose up --build
+```
+
+4. Accesos locales:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Swagger: http://localhost:8000/docs
+
+### Opcion B: Sin Docker
+
+Requiere Python 3.12+, Node 20+, PostgreSQL y Redis ejecutandose localmente.
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+Activa el entorno virtual:
+
+Windows (PowerShell):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Instala dependencias y ejecuta:
+
+```bash
+pip install --upgrade pip
+pip install .
+uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Detener servicios:**
 ```bash
-docker-compose down
-
-# Si quieres eliminar volúmenes (limpiar BD)
-docker-compose down -v
+cd frontend
+npm install
+npm run dev -- --host 0.0.0.0 --port 3000
 ```
 ---
 
@@ -454,37 +493,13 @@ git log --oneline -3
 ### 📚 Ejemplo Completo (Real)
 
 ```bash
-# 1. Sincronizar con develop
-git checkout develop && git pull origin develop
+# 1. Crear rama desde main actualizada
+git checkout main && git pull origin main
+git checkout -b feature/descripcion-corta
 
-# 2. Crear rama
-git checkout -b feature/carrito-persistente
-
-# 3. Desarrollar + testear
-cd backend
-.venv\Scripts\Activate.ps1
-uvicorn src.main:app --reload
-# ... código ...
-pytest tests/ --cov=src  # Verde ✅
-
-# 4. Commits limpios
-git add src/services/cart_service.py
-git commit -m "feat(cart): persistencia con Redis"
-git add src/routers/cart.py
-git commit -m "feat(cart): nuevos endpoints GET/POST/DELETE"
-git add tests/test_cart.py
-git commit -m "test(cart): 15 casos de prueba"
-
-# 5. Push
-git push -u origin feature/carrito-persistente
-
-# 6. GitHub: Create Pull Request
-#    - Base: develop ✅
-#    - Head: feature/carrito-persistente ✅
-#    - CI checks pass ✅
-#    - Merge by maintainer ✅
-#    - Delete branch after merge ✅
-```
+# 2. Hacer cambios y validar
+cd backend && pytest
+cd ../frontend && npm run lint
 
 ---
 
