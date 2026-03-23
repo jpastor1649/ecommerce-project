@@ -81,8 +81,17 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
     Raises:
         HTTPException: 401 if user not found or password is incorrect.
     """
-    # Find user by email
-    select_user = await db.execute(select(User).where(User.email == email))
+
+    try:
+        email_vo = Email(email)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            dedetail="Invalid credentials",
+        )
+
+    # Find user by normalized email
+    select_user = await db.execute(select(User).where(User.email == email_vo.value))
     user = select_user.scalars().first()
 
     if user is None:
@@ -93,9 +102,7 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
 
     # Verify password using Password VO
     try:
-        password_vo = Password.__new__(Password)
-        object.__setattr__(password_vo, "_hash", user.hashed_password)
-
+        password_vo = Password.from_hash(user.hashed_password)
         if not password_vo.verify(password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -114,8 +121,8 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
     expire = now + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {
         "sub": str(user.id),
-        "iat": now,
-        "exp": expire,
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return {"access_token": token, "token_type": "bearer"}

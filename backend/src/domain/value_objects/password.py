@@ -41,6 +41,21 @@ class Password:
             plain_password.encode("utf-8"), bcrypt.gensalt(rounds=12)
         ).decode("utf-8")
 
+    @classmethod
+    def from_hash(cls, hashed: str) -> "Password":
+        """
+        Create Password VO from an existing hash (e.g., from database).
+
+        Args:
+            hashed: Bcrypt hashed password string
+
+        Returns:
+            Password instance with existing hash
+        """
+        obj = cls.__new__(cls)
+        obj._hash = hashed
+        return obj
+
     @staticmethod
     def _validate_strength(password: str) -> None:
         """
