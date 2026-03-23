@@ -20,7 +20,7 @@ const Register = () => {
     setSuccess('')
     
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden')
+      setError('Passwords do not match')
       return
     }
     
@@ -36,13 +36,13 @@ const Register = () => {
       const data = await response.json()
 
       if (response.ok) {
-        setSuccess('Usuario creado exitosamente')
+        setSuccess('User created successfully')
         setTimeout(() => navigate('/'), 2000)
       } else {
-        setError(data.detail || 'Error al registrar usuario')
+        setError(data.detail || 'Error registering user')
       }
     } catch (err) {
-      setError('Error de conexión con el servidor')
+      setError('Server connection error')
     } finally {
       setLoading(false)
     }
@@ -51,18 +51,18 @@ const Register = () => {
   return (
     <div className="register-container">
       <div className="register-card">
-        <h2>Registrarse</h2>
+        <h2>Sign Up</h2>
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Nombre completo</label>
+            <label>Full name</label>
             <input
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              placeholder="Tu nombre"
+              placeholder="Your name"
             />
           </div>
           <div className="form-group">
@@ -72,11 +72,11 @@ const Register = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="tu@email.com"
+              placeholder="you@email.com"
             />
           </div>
           <div className="form-group">
-            <label>Contraseña</label>
+            <label>Password</label>
             <input
               type="password"
               value={password}
@@ -86,7 +86,7 @@ const Register = () => {
             />
           </div>
           <div className="form-group">
-            <label>Confirmar Contraseña</label>
+            <label>Confirm Password</label>
             <input
               type="password"
               value={confirmPassword}
@@ -96,11 +96,11 @@ const Register = () => {
             />
           </div>
           <button type="submit" disabled={loading}>
-            {loading ? 'Cargando...' : 'Registrarse'}
+            {loading ? 'Loading...' : 'Sign Up'}
           </button>
         </form>
         <p className="login-link">
-          ¿Ya tienes cuenta? <Link to="/">Inicia sesión aquí</Link>
+          Already have an account? <Link to="/">Sign in here</Link>
         </p>
       </div>
     </div>

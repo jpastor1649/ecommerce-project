@@ -29,10 +29,10 @@ const Login = () => {
         sessionStorage.setItem('authToken', data.access_token)
         navigate('/dashboard')
       } else {
-        setError(data.detail || 'Credenciales inválidas')
+        setError(data.detail || 'Invalid credentials')
       }
     } catch (err) {
-      setError('Error de conexión con el servidor')
+      setError('Server connection error')
     } finally {
       setLoading(false)
     }
@@ -41,7 +41,7 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>Iniciar Sesión</h2>
+        <h2>Sign In</h2>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -51,11 +51,11 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="tu@email.com"
+              placeholder="you@email.com"
             />
           </div>
           <div className="form-group">
-            <label>Contraseña</label>
+            <label>Password</label>
             <input
               type="password"
               value={password}
@@ -65,11 +65,11 @@ const Login = () => {
             />
           </div>
           <button type="submit" disabled={loading}>
-            {loading ? 'Cargando...' : 'Iniciar Sesión'}
+            {loading ? 'Loading...' : 'Sign In'}
           </button>
         </form>
         <p className="register-link">
-          ¿No tienes cuenta? <Link to="/register">Regístrate aquí</Link>
+          Don&apos;t have an account? <Link to="/register">Sign up here</Link>
         </p>
       </div>
     </div>

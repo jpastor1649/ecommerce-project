@@ -229,6 +229,12 @@ Si tu Docker usa binario legacy:
 docker-compose up --build
 ```
 
+Para detener y eliminar contenedores:
+
+```bash
+docker compose down
+```
+
 4. Accesos locales:
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
@@ -267,12 +273,17 @@ pip install .
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Detener servicios:**
+### Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev -- --host 0.0.0.0 --port 3000
 ```
+
+**Detener servicios (opción sin Docker):**
+- Cierra las terminales donde estén corriendo `uvicorn` y `npm run dev` (Ctrl + C).
+
 ---
 
 ## 📋 Requerimientos
@@ -299,6 +310,33 @@ npm run dev -- --host 0.0.0.0 --port 3000
 | RNF-04 | Catálogo categorizado | Tabla `categories` en PostgreSQL + filtros en frontend |
 | RNF-05 | Despliegue local con un solo comando | `docker compose up --build` |
 | RNF-06 | Al menos dos lenguajes de programación | Python 3.12 (FastAPI) + TypeScript (Next.js 14) |
+
+### ✅ Cobertura de Requerimientos — Primera Entrega
+
+#### Funcionales (RF)
+
+| ID | Estado en Entrega 1 | Evidencia resumida |
+|---|---|---|
+| RF-01 | ✅ Implementado | Registro e inicio de sesión con JWT en backend y formularios de login/register en frontend |
+| RF-02 | ⏳ Pendiente | No se implementa historial de compras ni preferencias en esta entrega |
+| RF-03 | ✅ Implementado | Catálogo con búsqueda y filtros por categoría |
+| RF-04 | ⏳ Pendiente | Carrito y checkout no incluidos en esta fase |
+| RF-05 | ⏳ Pendiente | Recomendaciones IA no implementadas en el MVP actual |
+| RF-06 | ⏳ Pendiente | Reseñas y calificaciones no incluidas en esta fase |
+| RF-07 | ⏳ Pendiente | Asistente conversacional IA no implementado aún |
+
+#### No Funcionales (RNF)
+
+| ID | Estado en Entrega 1 | Evidencia resumida |
+|---|---|---|
+| RNF-01 | 🟡 Parcial | Arquitectura por servicios con contenedores (backend, postgres, redis); faltan escenarios avanzados de resiliencia |
+| RNF-02 | ✅ Implementado | Separación por capas y dominios en backend (routers, services, schemas, models) |
+| RNF-03 | ⏳ Pendiente | Integración productiva de IA generativa no habilitada en esta entrega |
+| RNF-04 | ✅ Implementado | Modelo de categorías + endpoints y filtro en frontend |
+| RNF-05 | ✅ Implementado | Arranque local con `docker compose up --build` |
+| RNF-06 | ✅ Implementado | Backend en Python y frontend en JavaScript |
+
+> Nota: Esta tabla refleja el alcance real del MVP en la primera entrega y sirve como línea base para las siguientes iteraciones.
 
 ---
 
@@ -351,7 +389,7 @@ git checkout -b bugfix/arreglar-login
 
 ```bash
 # Levanta los servicios (Docker Compose - Opción A)
-docker-compose up --build -d
+docker compose up --build -d
 
 # O instalación manual (Opción B)
 cd backend
@@ -500,6 +538,14 @@ git checkout -b feature/descripcion-corta
 # 2. Hacer cambios y validar
 cd backend && pytest
 cd ../frontend && npm run lint
+
+# 3. Guardar cambios
+git add .
+git commit -m "feat(scope): descripcion corta"
+
+# 4. Subir rama
+git push -u origin feature/descripcion-corta
+```
 
 ---
 

@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useState } from 'react'
 import './App.css'
 import Login from './components/login'
 import Register from './components/Register'
+import ProductCatalog from './components/ProductCatalog'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -17,10 +17,7 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-// Componente Dashboard (tu contenido actual)
 function Dashboard() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
       <section id="center">
@@ -30,101 +27,16 @@ function Dashboard() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Bienvenido a tu E-commerce</h1>
+          <h1>Welcome to your E-commerce</h1>
           <p>
-            Has iniciado sesión correctamente. Empieza a explorar nuestros productos.
+            You have successfully logged in. Start exploring our products.
           </p>
         </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Contador: {count}
-        </button>
       </section>
 
       <div className="ticks"></div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Productos Destacados</h2>
-          <p>Descubre nuestras ofertas</p>
-          <ul>
-            <li>
-              <a href="/productos" target="_blank" rel="noopener noreferrer">
-                <img className="logo" src={viteLogo} alt="" />
-                Ver Productos
-              </a>
-            </li>
-            <li>
-              <a href="/ofertas" target="_blank" rel="noopener noreferrer">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Ver Ofertas
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Conéctate con nosotros</h2>
-          <p>Síguenos en redes sociales</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank" rel="noopener noreferrer">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank" rel="noopener noreferrer">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank" rel="noopener noreferrer">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank" rel="noopener noreferrer">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <ProductCatalog />
 
       <div className="ticks"></div>
       <section id="spacer"></section>

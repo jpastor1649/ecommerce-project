@@ -59,6 +59,13 @@ async def seed_initial_data(db: AsyncSession) -> None:
             "image_url": "https://via.placeholder.com/300x200?text=Home",
             "is_active": True,
         },
+        {
+            "name": "Sports & Outdoors",
+            "slug": "sports-outdoors",
+            "description": "Gear and accessories for training and outdoor life",
+            "image_url": "https://via.placeholder.com/300x200?text=Sports",
+            "is_active": True,
+        },
     ]
 
     slugs = [c["slug"] for c in category_data]
@@ -116,6 +123,30 @@ async def seed_initial_data(db: AsyncSession) -> None:
             stock=50,
             is_active=True,
         ),
+        Product(
+            category_id=categories["electronics"].id,
+            name="Smartwatch Series S5",
+            slug="smartwatch-series-s5",
+            description=(
+                "Fitness smartwatch with heart-rate monitor, sleep tracking, GPS, "
+                "and water resistance up to 50 meters."
+            ),
+            price=Decimal("219.99"),
+            stock=20,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["electronics"].id,
+            name="Mechanical Gaming Keyboard",
+            slug="mechanical-gaming-keyboard",
+            description=(
+                "Compact mechanical keyboard with RGB lighting, hot-swappable "
+                "switches, and anti-ghosting support."
+            ),
+            price=Decimal("99.99"),
+            stock=28,
+            is_active=True,
+        ),
         # Clothing
         Product(
             category_id=categories["clothing"].id,
@@ -147,6 +178,30 @@ async def seed_initial_data(db: AsyncSession) -> None:
             "soles and breathable material for daily wear.",
             price=Decimal("89.99"),
             stock=40,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["clothing"].id,
+            name="Unisex Hoodie Fleece",
+            slug="unisex-hoodie-fleece",
+            description=(
+                "Warm fleece hoodie with front pocket and adjustable drawstring, "
+                "ideal for cold weather and daily outfits."
+            ),
+            price=Decimal("59.99"),
+            stock=36,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["clothing"].id,
+            name="Lightweight Bomber Jacket",
+            slug="lightweight-bomber-jacket",
+            description=(
+                "Modern bomber jacket with water-repellent finish and soft inner "
+                "lining for urban and travel use."
+            ),
+            price=Decimal("109.99"),
+            stock=18,
             is_active=True,
         ),
         # Home & Garden
@@ -182,6 +237,91 @@ async def seed_initial_data(db: AsyncSession) -> None:
             ),
             price=Decimal("34.99"),
             stock=45,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["home-garden"].id,
+            name="Memory Foam Pillow",
+            slug="memory-foam-pillow",
+            description=(
+                "Orthopedic memory foam pillow that adapts to neck shape and helps "
+                "improve sleeping posture."
+            ),
+            price=Decimal("49.99"),
+            stock=42,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["home-garden"].id,
+            name="Ceramic Plant Pot Set",
+            slug="ceramic-plant-pot-set",
+            description=(
+                "Set of 3 minimalist ceramic pots with drainage trays, perfect for "
+                "small indoor plants and succulents."
+            ),
+            price=Decimal("27.99"),
+            stock=55,
+            is_active=True,
+        ),
+        # Sports & Outdoors
+        Product(
+            category_id=categories["sports-outdoors"].id,
+            name="Yoga Mat Pro 6mm",
+            slug="yoga-mat-pro-6mm",
+            description=(
+                "Non-slip yoga mat with 6mm cushioning for yoga, pilates, and home "
+                "workouts. Easy to roll and carry."
+            ),
+            price=Decimal("32.99"),
+            stock=70,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["sports-outdoors"].id,
+            name="Insulated Stainless Water Bottle 1L",
+            slug="insulated-stainless-water-bottle-1l",
+            description=(
+                "Vacuum-insulated bottle that keeps drinks cold for 24h or hot for "
+                "12h. Leak-proof cap and durable finish."
+            ),
+            price=Decimal("24.99"),
+            stock=80,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["sports-outdoors"].id,
+            name="Resistance Bands Kit",
+            slug="resistance-bands-kit",
+            description=(
+                "Set of 5 resistance bands with different tension levels, door "
+                "anchor, and carrying bag for full-body training."
+            ),
+            price=Decimal("29.99"),
+            stock=65,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["sports-outdoors"].id,
+            name="Compact Camping Lantern",
+            slug="compact-camping-lantern",
+            description=(
+                "Rechargeable LED lantern with three brightness modes and emergency "
+                "flasher, ideal for camping and power outages."
+            ),
+            price=Decimal("37.99"),
+            stock=33,
+            is_active=True,
+        ),
+        Product(
+            category_id=categories["sports-outdoors"].id,
+            name="Trail Running Backpack 12L",
+            slug="trail-running-backpack-12l",
+            description=(
+                "Lightweight 12L hydration-compatible backpack with breathable mesh "
+                "for trail running, hiking, and cycling."
+            ),
+            price=Decimal("69.99"),
+            stock=22,
             is_active=True,
         ),
     ]
