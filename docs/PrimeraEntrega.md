@@ -12,16 +12,15 @@
 | # | Nombre completo |
 |---|---|
 | 1 | Sara Isabel Ospina Valderrama |
-| 2 | Juan David Ruiz Guasca |
-| 3 | Juan David Castañeda Cárdenas |
-| 4 | John Alejandro Pastor Sandoval |
-| 5 | Andrés Felipe Perdomo Uruburu |
+| 2 | Juan David Castañeda Cárdenas |
+| 3 | John Alejandro Pastor Sandoval |
+| 4 | Andrés Felipe Perdomo Uruburu |
 
 ---
 
 ## Sistema de Software
 
-**Nombre:** *(Por definir)*
+**Nombre:** *Nexora*
 
 **Logo:** *(Por agregar)*
 
