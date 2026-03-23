@@ -67,10 +67,9 @@ extend-exclude = "migrations"
 [tool.pylint.messages_control]
 disable = [
     "too-few-public-methods",      # Value Objects y entidades simples
+    "line-too-long",               # Never complain about line length
 ]
 
-[tool.pylint.format]
-max-line-length = 88
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -84,11 +84,11 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
 
     try:
         email_vo = Email(email)
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            dedetail="Invalid credentials",
-        )
+            detail="Invalid credentials",
+        ) from exc
 
     # Find user by normalized email
     select_user = await db.execute(select(User).where(User.email == email_vo.value))

@@ -3,6 +3,7 @@
 This module provides functions to populate the database with sample data
 on application startup. Seeds are idempotent (safe to run multiple times).
 """
+
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,8 +84,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["electronics"].id,
             name="Wireless Bluetooth Headphones",
             slug="wireless-bluetooth-headphones",
-            description="High-quality Bluetooth headphones with active noise cancellation, "
-            "30-hour battery life, and premium sound quality.",
+            description=(
+                "High-quality Bluetooth headphones with active noise cancellation, "
+                "30-hour battery life, and premium sound quality."
+            ),
             price=Decimal("149.99"),
             stock=25,
             is_active=True,
@@ -93,7 +96,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["electronics"].id,
             name="USB-C Fast Charging Cable",
             slug="usb-c-fast-charging-cable",
-            description="Durable 2-meter USB-C cable supporting fast charging (65W) and high-speed data transfer rates.",
+            description=(
+                "Durable 2-meter USB-C cable supporting fast charging (65W) and "
+                "high-speed data transfer rates."
+            ),
             price=Decimal("14.99"),
             stock=100,
             is_active=True,
@@ -102,7 +108,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["electronics"].id,
             name="Portable Power Bank 20000mAh",
             slug="portable-power-bank-20000mah",
-            description="Compact power bank with dual USB ports, 20000mAh capacity, LED display, and fast charging support.",
+            description=(
+                "Compact power bank with dual USB ports, 20000mAh capacity, LED "
+                "display, and fast charging support."
+            ),
             price=Decimal("39.99"),
             stock=50,
             is_active=True,
@@ -122,7 +131,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["clothing"].id,
             name="Classic Blue Denim Jeans",
             slug="classic-blue-denim-jeans",
-            description="Timeless blue denim jeans with regular fit, perfect for casual or smart-casual occasions.",
+            description=(
+                "Timeless blue denim jeans with regular fit, perfect for casual or "
+                "smart-casual occasions."
+            ),
             price=Decimal("79.99"),
             stock=30,
             is_active=True,
@@ -131,8 +143,8 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["clothing"].id,
             name="Casual Sports Running Shoes",
             slug="casual-sports-running-shoes",
-            description="Lightweight and comfortable running shoes with anti-slip soles "
-            "and breathable material for daily wear.",
+            description="Lightweight and comfortable running shoes with anti-slip "
+            "soles and breathable material for daily wear.",
             price=Decimal("89.99"),
             stock=40,
             is_active=True,
@@ -152,7 +164,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["home-garden"].id,
             name="LED Desk Lamp with USB Charging",
             slug="led-desk-lamp-usb-charging",
-            description="Modern LED desk lamp with adjustable brightness, color temperature control, and built-in USB charging port.",
+            description=(
+                "Modern LED desk lamp with adjustable brightness, color temperature "
+                "control, and built-in USB charging port."
+            ),
             price=Decimal("45.99"),
             stock=35,
             is_active=True,
@@ -161,7 +176,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=categories["home-garden"].id,
             name="Wooden Desk Organizer Set",
             slug="wooden-desk-organizer-set",
-            description="Eco-friendly wooden desk organizer with multiple compartments for pens, papers, and office supplies.",
+            description=(
+                "Eco-friendly wooden desk organizer with multiple compartments for "
+                "pens, papers, and office supplies."
+            ),
             price=Decimal("34.99"),
             stock=45,
             is_active=True,
