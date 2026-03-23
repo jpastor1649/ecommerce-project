@@ -20,9 +20,15 @@
 
 ## Sistema de Software
 
-**Nombre:** *Nexora*
+<h1 align="center">Nexora</h1>
 
-**Logo:** *![Vista de Componentes y Controladores](./Nexora.png)*
+<p align="center">
+  <img src="./Nexora.png" width="400">
+</p>
+
+<p align="center">
+  Plataforma de e-commerce moderna 🚀
+</p>
 
 **Descripción:**
 
