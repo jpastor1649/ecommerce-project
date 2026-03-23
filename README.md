@@ -110,7 +110,7 @@ ecommerce-project/
 │       └── docker.yml
 │
 ├── backend/
-│   ├── dockerfile
+│   ├── Dockerfile
 │   ├── .dockerignore
 │   ├── pyproject.toml
 │   ├── src/
@@ -129,7 +129,7 @@ ecommerce-project/
 │   └── tests/
 │
 ├── frontend/
-│   ├── dockerfile
+│   ├── Dockerfile
 │   ├── .dockerignore
 │   ├── package.json
 │   ├── vite.config.js
