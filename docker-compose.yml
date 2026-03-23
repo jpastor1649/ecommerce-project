@@ -35,7 +35,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: DockerFile
+      dockerfile: dockerfile
     container_name: ecommerce_backend
     restart: unless-stopped
     env_file:
@@ -51,7 +51,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: dockerfile
     container_name: ecommerce_frontend
     restart: unless-stopped
     environment:
