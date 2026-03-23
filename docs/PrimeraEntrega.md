@@ -23,7 +23,7 @@
 <h1 align="center">Noventra</h1>
 
 <p align="center">
-  <img src="./Nexora.png" width="400">
+  <img src="./Noventra.png" width="400">
 </p>
 
 <p align="center">
