@@ -67,8 +67,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=electronics_category.id,
             name="Wireless Bluetooth Headphones",
             slug="wireless-bluetooth-headphones",
-            description="High-quality Bluetooth headphones with active noise cancellation, "
-            "30-hour battery life, and premium sound quality.",
+            description=(
+                "High-quality Bluetooth headphones with active noise cancellation, "
+                "30-hour battery life, and premium sound quality."
+            ),
             price=149.99,
             stock=25,
             is_active=True,
@@ -77,7 +79,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=electronics_category.id,
             name="USB-C Fast Charging Cable",
             slug="usb-c-fast-charging-cable",
-            description="Durable 2-meter USB-C cable supporting fast charging (65W) and high-speed data transfer rates.",
+            description=(
+                "Durable 2-meter USB-C cable supporting fast charging (65W) and "
+                "high-speed data transfer rates."
+            ),
             price=14.99,
             stock=100,
             is_active=True,
@@ -86,7 +91,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=electronics_category.id,
             name="Portable Power Bank 20000mAh",
             slug="portable-power-bank-20000mah",
-            description="Compact power bank with dual USB ports, 20000mAh capacity, LED display, and fast charging support.",
+            description=(
+                "Compact power bank with dual USB ports, 20000mAh capacity, LED "
+                "display, and fast charging support."
+            ),
             price=39.99,
             stock=50,
             is_active=True,
@@ -96,8 +104,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=clothing_category.id,
             name="100% Cotton Premium T-Shirt",
             slug="cotton-premium-tshirt",
-            description="Comfortable and breathable 100% cotton t-shirt, " \
-            "available in multiple colors and sizes for all body types.",
+            description=(
+                "Comfortable and breathable 100% cotton t-shirt, available in "
+                "multiple colors and sizes for all body types."
+            ),
             price=29.99,
             stock=50,
             is_active=True,
@@ -106,7 +116,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=clothing_category.id,
             name="Classic Blue Denim Jeans",
             slug="classic-blue-denim-jeans",
-            description="Timeless blue denim jeans with regular fit, perfect for casual or smart-casual occasions.",
+            description=(
+                "Timeless blue denim jeans with regular fit, perfect for casual or "
+                "smart-casual occasions."
+            ),
             price=79.99,
             stock=30,
             is_active=True,
@@ -115,8 +128,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=clothing_category.id,
             name="Casual Sports Running Shoes",
             slug="casual-sports-running-shoes",
-            description="Lightweight and comfortable running shoes with anti-slip soles "
-            "and breathable material for daily wear.",
+            description=(
+                "Lightweight and comfortable running shoes with anti-slip soles "
+                "and breathable material for daily wear."
+            ),
             price=89.99,
             stock=40,
             is_active=True,
@@ -126,8 +141,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=home_category.id,
             name="Adjustable Aluminum Phone Stand",
             slug="adjustable-aluminum-phone-stand",
-            description="Premium aluminum phone stand for desk or table, " \
-            "adjustable to any angle, compatible with all phones and tablets.",
+            description=(
+                "Premium aluminum phone stand for desk or table, adjustable to any "
+                "angle, compatible with all phones and tablets."
+            ),
             price=19.99,
             stock=60,
             is_active=True,
@@ -136,7 +153,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=home_category.id,
             name="LED Desk Lamp with USB Charging",
             slug="led-desk-lamp-usb-charging",
-            description="Modern LED desk lamp with adjustable brightness, color temperature control, and built-in USB charging port.",
+            description=(
+                "Modern LED desk lamp with adjustable brightness, color temperature "
+                "control, and built-in USB charging port."
+            ),
             price=45.99,
             stock=35,
             is_active=True,
@@ -145,7 +165,10 @@ async def seed_initial_data(db: AsyncSession) -> None:
             category_id=home_category.id,
             name="Wooden Desk Organizer Set",
             slug="wooden-desk-organizer-set",
-            description="Eco-friendly wooden desk organizer with multiple compartments for pens, papers, and office supplies.",
+            description=(
+                "Eco-friendly wooden desk organizer with multiple compartments for "
+                "pens, papers, and office supplies."
+            ),
             price=34.99,
             stock=45,
             is_active=True,

@@ -1,7 +1,6 @@
 """Email Value Object - Encapsulates email validation and normalization."""
 
 import re
-from typing import Self
 
 
 class Email:
@@ -15,7 +14,9 @@ class Email:
 
     # Simplified RFC 5322 email regex (covers 99% of real-world emails)
     EMAIL_REGEX = re.compile(
-        r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+        r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]"
+        r"(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9]"
+        r"(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
     )
 
     def __init__(self, value: str):

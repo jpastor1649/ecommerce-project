@@ -29,7 +29,8 @@ async def lifespan(_app: FastAPI):
         None: Control returns to FastAPI framework.
 
     Note:
-        - Startup: Creates database tables from SQLAlchemy models and seeds initial data.
+        - Startup: Creates database tables from SQLAlchemy models and seeds
+          initial data.
         - Shutdown: Disposes database engine and releases resources.
     """
     # Initialize database tables

@@ -94,7 +94,7 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
     # Verify password using Password VO
     try:
         password_vo = Password.__new__(Password)
-        password_vo._hash = user.hashed_password
+        object.__setattr__(password_vo, "_hash", user.hashed_password)
 
         if not password_vo.verify(password):
             raise HTTPException(

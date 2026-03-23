@@ -75,7 +75,8 @@ class Password:
 
         if not re.search(f"[{re.escape(Password.SPECIAL_CHARS)}]", password):
             raise ValueError(
-                f"Password must contain at least one special character: {Password.SPECIAL_CHARS}"
+                f"Password must contain at least one special character: "
+                f"{Password.SPECIAL_CHARS}"
             )
 
     @property
@@ -102,7 +103,7 @@ class Password:
 
     def __repr__(self) -> str:
         """Developer representation (never shows hash)."""
-        return f"Password(hash=***)"
+        return "Password(hash=***)"
 
     def __eq__(self, other: object) -> bool:
         """Compare password hashes."""
