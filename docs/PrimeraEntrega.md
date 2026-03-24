@@ -20,10 +20,10 @@
 
 ## Sistema de Software
 
-<h1 align="center">Noventra</h1>
+<h1 align="center">AICart</h1>
 
 <p align="center">
-  <img src="./Noventra.png" width="400">
+  <img src="./AICart.png" width="400">
 </p>
 
 <p align="center">
