@@ -1,7 +1,7 @@
 # Primera Entrega — Prototipo Arquitectónico
 **Curso:** Arquitectura de Software (Arquisoft)  
 > **Entrega:** Primera Entrega — Prototipo Vertical  
-> **Fecha:** 2026-03-18
+> **Fecha:** 2026-03-23
 
 ---
 
