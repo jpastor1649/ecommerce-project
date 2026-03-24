@@ -1,5 +1,5 @@
 # 🛒 E-commerce Inteligente — Grupo D
-## El README.md presente es el del proyecto general, el del primer protototipo se encuentra en [Artifact](docs/Artifact.md)
+## El README.md presente es el del proyecto general, el del primer prototipo se encuentra en [Artifact](docs/Artifact.md)
 
 [![Lint](https://github.com/jpastor1649/ecommerce-project/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/lint.yml)
 [![Tests](https://github.com/jpastor1649/ecommerce-project/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/test.yml)
@@ -165,9 +165,9 @@ git clone https://github.com/jpastor1649/ecommerce-project.git
 cd ecommerce-project
 
 # 2. Configurar variables de entorno
-cp backend/.env.docker.example backend/.env.docker
+cp .env.example .env
 # Windows PowerShell:
-# Copy-Item backend/.env.docker.example backend/.env.docker
+# Copy-Item .env.example .env
 
 # 3. Levantar todos los servicios con un solo comando
 docker compose up --build
@@ -477,8 +477,8 @@ Fixes #123 (número del issue, si aplica)
 #### 6️⃣ **Code Review y Merge**
 
 El PR pasará automáticamente:
-- ✅ **lint.yml** — verifica formato (Black, Flake8)
-- ✅ **test.yml** — ejecuta tests (pytest con cobertura ≥80%)
+- ✅ **lint.yml** — verifica formato y estilo (`black --check`, `pylint`)
+- ✅ **test.yml** — ejecuta tests (`pytest`)
 - ✅ **docker.yml** — valida build de imagen Docker
 
 Si todo pasa:
