@@ -166,10 +166,10 @@ cd ecommerce-project
 
 # 2. Copiar variables de entorno
 cp .env.example .env
-# Editar .env y completar:
-#   GEMINI_API_KEY=tu_clave_aqui
-#   WOMPI_PUBLIC_KEY=tu_clave_aqui
-#   WOMPI_PRIVATE_KEY=tu_clave_aqui
+# Editar .env y completar con:
+#  POSTGRES_USER=ecommerce_user
+#  POSTGRES_PASSWORD=ecommerce_password
+#  POSTGRES_DB=ecommerce_db
 
 # 3. Levantar todos los servicios con un solo comando
 docker compose up --build
@@ -177,17 +177,15 @@ docker compose up --build
 # 4. Acceder a la aplicación
 # Frontend:                    http://localhost:3000
 # Documentación core-service:  http://localhost:8000/docs
-# Documentación ai-service:    http://localhost:8001/docs
 ```
 
 **Servicios levantados por `docker compose up`:**
 
 | Servicio | Puerto | Tecnología | Descripción |
 |---|---|---|---|
-| `frontend` | 3000 | Next.js 14 | Aplicación web |
+| `frontend` | 3000 | React+ Vite 14 | Aplicación web |
 | `core-service` | 8000 | FastAPI (Python) | API de lógica de negocio |
-| `ai-service` | 8001 | FastAPI (Python) | API de funcionalidades IA |
-| `postgres` | 5432 | PostgreSQL 15 + pgvector | Base de datos relacional |
+| `postgres` | 5432 | PostgreSQL 15 | Base de datos relacional |
 | `redis` | 6379 | Redis | Caché NoSQL |
 
 **Para detener todos los servicios:**
@@ -197,5 +195,5 @@ docker compose down
 
 ---
 
-*Documento generado en Fase 0 — Grupo D, Arquisoft.*
+*Documento generado en la primer entrega — Grupo D, Arquisoft.*
 
