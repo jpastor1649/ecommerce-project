@@ -165,9 +165,9 @@ git clone https://github.com/jpastor1649/ecommerce-project.git
 cd ecommerce-project
 
 # 2. Configurar variables de entorno
-cp backend/.env.docker.example backend/.env.docker
+cp .env.example .env
 # Windows PowerShell:
-# Copy-Item backend/.env.docker.example backend/.env.docker
+# Copy-Item .env.example .env
 
 # 3. Levantar todos los servicios con un solo comando
 docker compose up --build
