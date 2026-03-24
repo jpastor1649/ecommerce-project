@@ -23,8 +23,18 @@ export default function ProductCatalog() {
 
   const hasProducts = useMemo(() => products.length > 0, [products])
 
+  const getAuthHeaders = () => {
+    const token = sessionStorage.getItem('authToken')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  }
+
   const fetchCategories = async () => {
-    const response = await fetch(`${API_BASE_URL}/products/categories`)
+    const response = await fetch(`${API_BASE_URL}/products/categories`, {
+      headers: getAuthHeaders()
+    })
     if (!response.ok) throw new Error('Could not load categories')
     const data = await response.json()
     setCategories(data)
@@ -36,7 +46,9 @@ export default function ProductCatalog() {
       url.searchParams.set('category_slug', categorySlug)
     }
 
-    const response = await fetch(url.toString())
+    const response = await fetch(url.toString(), {
+      headers: getAuthHeaders()
+    })
     if (!response.ok) throw new Error('Could not load products')
     const data = await response.json()
     setProducts(data)
@@ -45,8 +57,15 @@ export default function ProductCatalog() {
   const searchProducts = async (query) => {
     const url = new URL(`${API_BASE_URL}/products/search`)
     url.searchParams.set('q', query)
+    
+    // Agregar categoría a la búsqueda si está seleccionada
+    if (selectedCategory) {
+      url.searchParams.set('category_slug', selectedCategory)
+    }
 
-    const response = await fetch(url.toString())
+    const response = await fetch(url.toString(), {
+      headers: getAuthHeaders()
+    })
     if (!response.ok) throw new Error('Search request failed')
     const data = await response.json()
     setProducts(data)

@@ -49,12 +49,13 @@ class ProductService:
         )
         return result.scalars().all()
 
-    async def search_products(self, query_string: str) -> list[Product]:
+    async def search_products(self, query_string: str, category_slug: str | None = None) -> list[Product]:
         """
         Search products by name or description (case-insensitive).
 
         Args:
             query_string: Search term (will be searched in name and description)
+            category_slug: Optional category slug for filtering results
 
         Returns:
             List of Product objects matching the search criteria
@@ -67,6 +68,10 @@ class ProductService:
                 Product.description.ilike(search_term),
             ),
         )
+
+        if category_slug:
+            query = query.join(Category).where(Category.slug == category_slug)
+
         result = await self.db.execute(query)
         return result.scalars().all()
 
