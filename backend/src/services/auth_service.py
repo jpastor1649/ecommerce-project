@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config.settings import settings
+from src.core.redis_client import save_user_session
 from src.domain.value_objects import Email, Password
 from src.models.user import User
 from src.schemas.user import UserRegister, UserResponse
@@ -125,4 +126,8 @@ async def auth_user(email: str, password: str, db: AsyncSession) -> dict:
         "exp": int(expire.timestamp()),
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+    # Persist session server-side to support logout/token invalidation.
+    await save_user_session(str(user.id), token)
+
     return {"access_token": token, "token_type": "bearer"}

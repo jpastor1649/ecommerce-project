@@ -29,6 +29,27 @@ body {
   border: 1px solid rgba(156, 39, 176, 0.3);
 }
 
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.auth-brand-logo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+
+.auth-brand-name {
+  color: #d8c8ff;
+  margin-top: 6px;
+  font-size: 14px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
 .login-card h2 {
   color: #fff;
   text-align: center;

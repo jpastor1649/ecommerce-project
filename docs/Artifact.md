@@ -12,13 +12,14 @@
 | # | Nombre completo |
 |---|---|
 | 1 | Sara Isabel Ospina Valderrama |
-| 2 | Juan David Castañeda Cárdenas |
-| 3 | John Alejandro Pastor Sandoval |
-| 4 | Andrés Felipe Perdomo Uruburu |
+| 2 | Juan David Ruiz Guasca |
+| 3 | Juan David Castañeda Cárdenas |
+| 4 | John Alejandro Pastor Sandoval |
+| 5 | Andrés Felipe Perdomo Uruburu |
 
 ---
 
-## Sistema de Software
+## Sistema B2C
 
 <h1 align="center">AICart</h1>
 
@@ -97,9 +98,9 @@ El prototipo demuestra un **corte vertical mínimo** del sistema: un flujo compl
 
 ## Estructuras Arquitectónicas
 
-#### Vista de Componentes y Controladores
+#### Vista de Componentes y Conectores
 
-![Vista de Componentes y Controladores](./cc.svg)
+![Vista de Componentes y Conectores](./cc.svg)
 
 ---
 

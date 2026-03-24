@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config.settings import settings
 from src.core.database import engine, async_session_local
+from src.core.redis_client import close_redis_connection
 from src.core.seeds import seed_initial_data
 from src.models.base import Base
 from src.routers.auth import router as auth_router
@@ -44,6 +45,7 @@ async def lifespan(_app: FastAPI):
     yield  # App runs here
 
     # Clean up without blocking shutdown
+    await close_redis_connection()
     await engine.dispose()
 
 

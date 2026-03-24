@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Register.css'
+import aicartLogo from '../assets/AICart.png'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -51,6 +52,11 @@ const Register = () => {
   return (
     <div className="register-container">
       <div className="register-card">
+        <div className="auth-brand">
+          <img src={aicartLogo} alt="AICart logo" className="auth-brand-logo" />
+          <p className="auth-brand-name">AICart</p>
+        </div>
+
         <h2>Sign Up</h2>
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}

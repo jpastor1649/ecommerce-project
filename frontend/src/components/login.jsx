@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './login.css'
+import aicartLogo from '../assets/AICart.png'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
@@ -41,6 +42,11 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-card">
+        <div className="auth-brand">
+          <img src={aicartLogo} alt="AICart logo" className="auth-brand-logo" />
+          <p className="auth-brand-name">AICart</p>
+        </div>
+
         <h2>Sign In</h2>
         {error && <div className="error-message">{error}</div>}
         <form onSubmit={handleSubmit}>
