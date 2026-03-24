@@ -477,8 +477,8 @@ Fixes #123 (número del issue, si aplica)
 #### 6️⃣ **Code Review y Merge**
 
 El PR pasará automáticamente:
-- ✅ **lint.yml** — verifica formato (Black, Flake8)
-- ✅ **test.yml** — ejecuta tests (pytest con cobertura ≥80%)
+- ✅ **lint.yml** — verifica formato y estilo (`black --check`, `pylint`)
+- ✅ **test.yml** — ejecuta tests (`pytest`)
 - ✅ **docker.yml** — valida build de imagen Docker
 
 Si todo pasa:
