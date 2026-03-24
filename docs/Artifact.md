@@ -105,31 +105,57 @@ El prototipo demuestra un **corte vertical mínimo** del sistema: un flujo compl
 
 #### Descripción de los Estilos Arquitectónicos Utilizados
 
-**1. Arquitectura de Microservicios**
+Esta sección diferencia entre lo que **ya está implementado en el código del prototipo** y lo que se **plantea como arquitectura objetivo en la narrativa**.
 
-El backend está dividido en dos servicios independientes con responsabilidades de dominio únicas:
+**A. Estilos arquitectónicos usados actualmente (implementados)**
 
-- **`core-service`** — propietario de toda la lógica de negocio del e-commerce: autenticación, catálogo de productos, carrito de compras, órdenes y pagos. Desplegado en Koyeb (free tier always-ON).
-- **`ai-service`** — propietario de todas las funcionalidades de IA: asistente conversacional, recomendaciones de productos, búsqueda semántica y moderación de reseñas. Desplegado en Render (free tier). Integrado con Google Gemini Flash.
+**1. Arquitectura cliente-servidor (SPA + API REST)**
 
-Ambos servicios son desplegables de forma independiente y tolerantes a fallos. Un fallo en `ai-service` no interrumpe el flujo principal del e-commerce.
+La solución actual se implementa como:
 
-**2. Clean Architecture (por servicio)**
+- **Frontend SPA (React + Vite)** consumiendo endpoints HTTP.
+- **Backend FastAPI** exponiendo rutas REST para autenticación y catálogo.
 
-Cada microservicio sigue Clean Architecture (Modelo Cebolla) con una dirección de dependencia estrictamente hacia adentro:
+La comunicación principal es `frontend -> backend` vía JSON/HTTPS.
+
+**2. Monolito modular por capas (en backend)**
+
+Aunque hay separación interna por módulos (`routers`, `services`, `schemas`, `models`, `domain`), el backend se despliega hoy como **un único servicio**.
+
+La organización en capas sigue esta dirección:
 
 ```
-Presentación → Aplicación → Dominio ← Infraestructura
+Routers/Presentación -> Servicios/Aplicación -> Dominio + Modelos/Persistencia
 ```
 
-- **Capa de Dominio** — entidades Python puras, value objects e interfaces de repositorio. Cero imports externos.
-- **Capa de Aplicación** — casos de uso que orquestan la lógica del dominio.
-- **Capa de Infraestructura** — implementaciones concretas: repositorios SQLAlchemy, caché Redis, adaptador Gemini, adaptador Wompi.
-- **Capa de Presentación** — routers FastAPI y esquemas Pydantic v2.
+Esta estructura facilita evolución y mantenibilidad, pero todavía no representa microservicios independientes en ejecución.
+
+**3. Enfoque parcial de Clean Architecture**
+
+Se observan principios de Clean Architecture en el uso de Value Objects de dominio (por ejemplo email y password) y separación de responsabilidades. Sin embargo, en esta fase no hay una implementación completa de puertos/adaptadores para todos los módulos del sistema.
+
+**B. Estilos arquitectónicos objetivo (según la narrativa del proyecto)**
+
+**1. Arquitectura de microservicios**
+
+La narrativa propone separar la plataforma en dos servicios de negocio desplegables de forma independiente:
+
+- **`core-service`** — autenticación, catálogo, carrito, órdenes, pagos y reseñas.
+- **`ai-service`** — asistente conversacional, recomendaciones, búsqueda semántica y moderación de contenido.
+
+**2. Clean Architecture completa por servicio**
+
+Cada microservicio seguiría explícitamente el modelo cebolla, con dependencias hacia adentro:
+
+```
+Presentación -> Aplicación -> Dominio <- Infraestructura
+```
+
+Incluye entidades y value objects puros, interfaces de repositorio en dominio y adaptadores concretos en infraestructura.
 
 **3. Patrón BFF (Backend for Frontend)**
 
-Next.js actúa como BFF: llama a `core-service` y `ai-service` desde componentes del lado del servidor, agregando las respuestas antes de renderizar. Esto evita exponer las URLs internas de los servicios al navegador.
+La narrativa plantea un frontend con BFF (Next.js) que agregue respuestas de `core-service` y `ai-service` del lado servidor, evitando exponer URLs internas directamente al navegador.
 
 ---
 
@@ -137,16 +163,11 @@ Next.js actúa como BFF: llama a `core-service` y `ai-service` desde componentes
 
 | Elemento | Tipo | Tecnología | Responsabilidad |
 |---|---|---|---|
-| `Frontend Next.js` | Componente de presentación | TypeScript, Next.js 14 | Renderiza la UI; llama a core-service y ai-service vía REST |
-| `core-service` | Componente de lógica | Python 3.12, FastAPI | Auth, productos, órdenes, carrito, pagos, reseñas |
-| `ai-service` | Componente de lógica | Python 3.12, FastAPI | Chatbot Gemini, recomendaciones, búsqueda semántica, moderación |
-| `PostgreSQL + pgvector` | Componente de datos (relacional) | Supabase PostgreSQL 15 | Almacenamiento persistente de entidades de dominio + vectores de embeddings |
-| `Redis` | Componente de datos (NoSQL clave-valor) | Redis Cloud | Caché de sesiones, estado del carrito, TTL de búsquedas, rate limiting |
+| `Frontend Next.js, React + Vite` | Componente de presentación | TypeScript, Next.js 14 | Renderiza la UI; llama a core-service y ai-service vía REST |
+| `core-service` | Componente de lógica | Python 3.12, FastAPI | Auth, productos,carrito |
+| `PostgreSQL (con Docker)` | Componente de datos (relacional) | Supabase PostgreSQL 15 | Almacenamiento persistente de entidades de dominio + vectores de embeddings |
+| `Redis (con Docker)` | Componente de datos (NoSQL clave-valor) | Redis Cloud | Caché de sesiones, estado del carrito, TTL de búsquedas, rate limiting |
 | `Conector REST ①` | Conector HTTP | JSON / HTTPS | Comunicación entre frontend y servicios backend |
-| `Conector REST interno ②` | Conector HTTP | httpx async / HTTPS | Comunicación de core-service hacia ai-service |
-| `Google Gemini Flash` | Sistema externo | google-generativeai SDK | Proveedor LLM: chat, embeddings, moderación |
-| `Wompi Colombia` | Sistema externo | REST API | Pasarela de pagos: PSE, Nequi, tarjetas |
-
 ---
 
 ## Prototipo
