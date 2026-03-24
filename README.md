@@ -1,5 +1,5 @@
 # 🛒 E-commerce Inteligente — Grupo D
-## El README.md presente es el del proyecto general, el del primer protototipo se encuentra en [Artifact](docs/Artifact.md)
+## El README.md presente es el del proyecto general, el del primer prototipo se encuentra en [Artifact](docs/Artifact.md)
 
 [![Lint](https://github.com/jpastor1649/ecommerce-project/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/lint.yml)
 [![Tests](https://github.com/jpastor1649/ecommerce-project/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/jpastor1649/ecommerce-project/actions/workflows/test.yml)
