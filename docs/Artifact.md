@@ -162,13 +162,38 @@ La narrativa plantea un frontend con BFF (Next.js) que agregue respuestas de `co
 
 #### Descripción de Elementos y Relaciones Arquitectónicas
 
+**A. Estado actual (prototipo implementado en código)**
+
 | Elemento | Tipo | Tecnología | Responsabilidad |
 |---|---|---|---|
-| `Frontend Next.js, React + Vite` | Componente de presentación | TypeScript, Next.js 14 | Renderiza la UI; llama a core-service y ai-service vía REST |
-| `core-service` | Componente de lógica | Python 3.12, FastAPI | Auth, productos,carrito |
-| `PostgreSQL (con Docker)` | Componente de datos (relacional) | Supabase PostgreSQL 15 | Almacenamiento persistente de entidades de dominio + vectores de embeddings |
-| `Redis (con Docker)` | Componente de datos (NoSQL clave-valor) | Redis Cloud | Caché de sesiones, estado del carrito, TTL de búsquedas, rate limiting |
-| `Conector REST ①` | Conector HTTP | JSON / HTTPS | Comunicación entre frontend y servicios backend |
+| `Frontend Web` | Componente de presentación | React + Vite (JavaScript) | Renderiza la UI y consume endpoints del backend vía REST |
+| `Backend API` (`core-service` en la narrativa) | Componente de lógica | Python 3.12, FastAPI | Auth, catálogo de productos, búsqueda, y sesión JWT con persistencia en Redis |
+| `PostgreSQL (Docker)` | Componente de datos (relacional) | PostgreSQL 15 | Persistencia de usuarios, categorías y productos del prototipo |
+| `Redis (Docker)` | Componente de datos (NoSQL clave-valor) | Redis 7 | Persistencia de sesiones activas (login/logout) y soporte de caché de corto plazo |
+| `Conector REST` | Conector HTTP | JSON / HTTP | Comunicación frontend -> backend |
+
+**Relaciones implementadas hoy:**
+
+1. `Frontend Web` -> `Backend API`: login, registro, catálogo, búsqueda y logout.
+2. `Backend API` -> `PostgreSQL`: lectura/escritura de entidades de negocio.
+3. `Backend API` -> `Redis`: almacenamiento e invalidación de sesiones.
+
+**B. Estado objetivo (narrativa arquitectónica del proyecto)**
+
+| Elemento | Tipo | Tecnología | Responsabilidad |
+|---|---|---|---|
+| `Frontend BFF` | Componente de presentación | Next.js 14 + TypeScript | Agregar respuestas del backend en servidor y ocultar servicios internos al navegador |
+| `core-service` | Componente de lógica | FastAPI | Auth, catálogo, carrito, órdenes, pagos y reseñas |
+| `ai-service` | Componente de lógica | FastAPI + Gemini | Recomendaciones, búsqueda semántica, chatbot y moderación de contenido |
+| `PostgreSQL + pgvector` | Componente de datos (relacional/vectorial) | PostgreSQL 15 + extensión pgvector | Persistencia transaccional y similitud semántica por embeddings |
+| `Redis Cloud` | Componente de datos (NoSQL clave-valor) | Redis administrado | Sesiones, carritos, cache de consultas y rate limiting |
+| `Conector REST interno` | Conector HTTP | JSON / HTTPS (httpx async) | Comunicación `core-service` <-> `ai-service` |
+
+**Relaciones objetivo:**
+
+1. `Frontend BFF` -> `core-service` y `ai-service`.
+2. `core-service` -> `ai-service` para casos de IA de negocio.
+3. Ambos servicios -> `PostgreSQL + pgvector` y `Redis Cloud` según su responsabilidad.
 ---
 
 ## Prototipo
