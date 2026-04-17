@@ -20,3 +20,10 @@ services:
       DATABASE_URL: postgresql://user:password@user-db:5432/users_db
     ports:
       - "8000:8000"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
