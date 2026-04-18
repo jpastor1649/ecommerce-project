@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     debug: bool = False
     jwt_secret: str = "change-this-secret"
     jwt_algorithm: str = "HS256"
+    redis_url: str = "redis://redis:6379/0"
+    auth_session_prefix: str = "auth:session"
+    auth_blacklist_prefix: str = "auth:blacklist"
+    require_redis_session: bool = True
+    user_service_base_url: str = "http://user-service:8000"
+    seller_name_cache_ttl_seconds: int = 900
+    category_name_cache_ttl_seconds: int = 900
     max_images_per_product: int = 8
     forbidden_review_terms: str = ""
 

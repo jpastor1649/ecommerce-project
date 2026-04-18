@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from product_service.core.config.settings import settings
 from product_service.core.database import engine, async_session_local
 from product_service.core.redis_client import close_redis_connection
+from product_service.core.redis_client import get_redis_client
 from product_service.core.seeds import seed_initial_data
 from product_service.models.base import Base
 from product_service.routers.auth import router as auth_router
@@ -41,6 +42,9 @@ async def lifespan(_app: FastAPI):
     # Seed initial data (idempotent)
     async with async_session_local() as db:
         await seed_initial_data(db)
+
+    redis_client = get_redis_client()
+    await redis_client.ping()
 
     yield  # App runs here
 

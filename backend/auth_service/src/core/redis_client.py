@@ -1,10 +1,10 @@
-"""Redis client utilities for product_service."""
+"""Redis client utilities for auth session management."""
 
 from __future__ import annotations
 
 import redis.asyncio as redis
 
-from product_service.core.config.settings import settings
+from auth_service.src.core.settings import settings
 
 _redis_client: redis.Redis | None = None
 

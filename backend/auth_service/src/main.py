@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from auth_service.src.core.database import engine
+from auth_service.src.core.redis_client import close_redis_connection, get_redis_client
 from auth_service.src.models.base import Base
 from auth_service.src.models.user import User  # noqa: F401
 from auth_service.src.core.settings import settings
@@ -28,9 +29,13 @@ async def lifespan(_app: FastAPI):
                 raise
             await asyncio.sleep(2)
 
+    redis_client = get_redis_client()
+    await redis_client.ping()
+
     yield
 
     await engine.dispose()
+    await close_redis_connection()
 
 
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)

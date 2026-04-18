@@ -2,6 +2,7 @@
 
 import re
 from uuid import UUID
+import httpx
 from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -14,6 +15,7 @@ from product_service.models.product import (
     ProductReview,
 )
 from product_service.core.config.settings import settings
+from product_service.core.redis_client import get_redis_client
 
 
 class ProductService:
@@ -62,11 +64,29 @@ class ProductService:
         if not products:
             return products
 
+        redis_client = get_redis_client()
+
         category_ids = {product.category_id for product in products}
-        category_result = await self.db.execute(
-            select(Category).where(Category.id.in_(category_ids))
-        )
-        categories_by_id = {category.id: category for category in category_result.scalars().all()}
+
+        category_names_by_id: dict[UUID, str] = {}
+        missing_category_ids: list[UUID] = []
+        for category_id in category_ids:
+            cache_key = f"product:category_name:{category_id}"
+            cached_name = await redis_client.get(cache_key)
+            if cached_name:
+                category_names_by_id[category_id] = cached_name
+            else:
+                missing_category_ids.append(category_id)
+
+        if missing_category_ids:
+            category_result = await self.db.execute(
+                select(Category).where(Category.id.in_(missing_category_ids))
+            )
+            fetched_categories = category_result.scalars().all()
+            for category in fetched_categories:
+                category_names_by_id[category.id] = category.name
+                cache_key = f"product:category_name:{category.id}"
+                await redis_client.set(cache_key, category.name, ex=settings.category_name_cache_ttl_seconds)
 
         product_ids = [product.id for product in products]
         image_result = await self.db.execute(
@@ -83,10 +103,42 @@ class ProductService:
             if image.product_id not in cover_by_product:
                 cover_by_product[image.product_id] = image.image_url
 
+        seller_ids = {str(product.seller_user_id) for product in products}
+        seller_names: dict[str, str] = {}
+        missing_seller_ids: list[str] = []
+
+        for seller_id in seller_ids:
+            cache_key = f"product:seller_name:{seller_id}"
+            cached_name = await redis_client.get(cache_key)
+            if cached_name:
+                seller_names[seller_id] = cached_name
+            else:
+                missing_seller_ids.append(seller_id)
+
+        if missing_seller_ids:
+            async with httpx.AsyncClient(timeout=2.5) as client:
+                for seller_id in missing_seller_ids:
+                    try:
+                        response = await client.get(f"{settings.user_service_base_url}/users/{seller_id}")
+                        if response.status_code != 200:
+                            continue
+                        data = response.json()
+                        display_name = data.get("name") or data.get("email")
+                        if isinstance(display_name, str) and display_name.strip():
+                            normalized = display_name.strip()
+                            seller_names[seller_id] = normalized
+                            cache_key = f"product:seller_name:{seller_id}"
+                            await redis_client.set(
+                                cache_key,
+                                normalized,
+                                ex=settings.seller_name_cache_ttl_seconds,
+                            )
+                    except httpx.HTTPError:
+                        continue
+
         for product in products:
-            category = categories_by_id.get(product.category_id)
-            setattr(product, "category_name", category.name if category else None)
-            setattr(product, "seller_display_name", None)
+            setattr(product, "category_name", category_names_by_id.get(product.category_id))
+            setattr(product, "seller_display_name", seller_names.get(str(product.seller_user_id)))
             setattr(product, "cover_image_url", cover_by_product.get(product.id))
 
         return products

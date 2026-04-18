@@ -51,6 +51,18 @@ services:
       retries: 10
       start_period: 40s
 
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     build:
       context: ./backend
@@ -62,6 +74,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: ${AUTH_DATABASE_URL}
       APP_NAME: ${AUTH_APP_NAME:-Auth Service}
@@ -71,6 +85,7 @@ services:
       JWT_EXPIRE_MINUTES: ${AUTH_JWT_EXPIRE_MINUTES:-60}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     command: uvicorn auth_service.src.main:app --host 0.0.0.0 --port 8001
     ports:
       - "${AUTH_SERVICE_EXTERNAL_PORT:-8001}:8001"
@@ -83,6 +98,8 @@ services:
     restart: unless-stopped
     depends_on:
       user-postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -102,12 +119,16 @@ services:
     depends_on:
       user-postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://user_user:user_password@user-postgres:5432/user_db}
       APP_NAME: ${PRODUCT_APP_NAME:-Product Service}
       DEBUG: ${PRODUCT_DEBUG:-false}
       JWT_SECRET: ${AUTH_JWT_SECRET}
       JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL:-http://user-service:8000}
     command: uvicorn product_service.main:app --host 0.0.0.0 --port 8003
     ports:
       - "${PRODUCT_SERVICE_EXTERNAL_PORT:-8003}:8003"

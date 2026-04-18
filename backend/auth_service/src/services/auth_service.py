@@ -1,11 +1,16 @@
 """Auth business logic for register/login operations."""
 
+import hashlib
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth_service.src.events.publisher import EventPublisher
+from auth_service.src.core.redis_client import get_redis_client
 from auth_service.src.core.settings import settings
 from auth_service.src.core.security import (
     create_access_token,
@@ -23,6 +28,48 @@ publisher = EventPublisher(
 
 def _normalize_email(email: str) -> str:
     return email.lower().strip()
+
+
+def _token_fingerprint(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _session_key(token: str) -> str:
+    return f"{settings.auth_session_prefix}:{_token_fingerprint(token)}"
+
+
+def _blacklist_key(token: str) -> str:
+    return f"{settings.auth_blacklist_prefix}:{_token_fingerprint(token)}"
+
+
+def _token_ttl_seconds(token: str) -> int:
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+    except JWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        ) from exc
+    exp_raw = payload.get("exp")
+    if not isinstance(exp_raw, int):
+        return settings.jwt_expire_minutes * 60
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    return max(1, exp_raw - now_ts)
+
+
+async def store_token_session(token: str, user_id: str) -> None:
+    """Store active token session in Redis."""
+    redis_client = get_redis_client()
+    ttl = _token_ttl_seconds(token)
+    await redis_client.set(_session_key(token), user_id, ex=ttl)
+
+
+async def revoke_token(token: str) -> None:
+    """Blacklist a token in Redis until it expires."""
+    redis_client = get_redis_client()
+    ttl = _token_ttl_seconds(token)
+    await redis_client.set(_blacklist_key(token), "1", ex=ttl)
+    await redis_client.delete(_session_key(token))
 
 
 def _publish_user_registered_event(auth_user_id: str, full_name: str, email: str) -> None:
@@ -82,4 +129,5 @@ async def login_user(email: str, password: str, db: AsyncSession) -> TokenRespon
         )
 
     token = create_access_token(str(user.id))
+    await store_token_session(token, str(user.id))
     return TokenResponse(access_token=token)
