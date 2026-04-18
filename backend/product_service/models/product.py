@@ -16,6 +16,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -90,6 +91,9 @@ class Product(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    seller_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, index=True
+    )
     category_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False
     )
@@ -110,3 +114,60 @@ class Product(Base):
     )
 
     category: Mapped["Category"] = relationship(back_populates="products")
+    reviews: Mapped[list["ProductReview"]] = relationship(
+        "ProductReview", back_populates="product", cascade="all, delete-orphan"
+    )
+    images: Mapped[list["ProductImage"]] = relationship(
+        "ProductImage", back_populates="product", cascade="all, delete-orphan"
+    )
+
+
+class ProductReview(Base):
+    """Represents a user review for a product listing."""
+
+    __tablename__ = "product_reviews"
+    __table_args__ = (
+        UniqueConstraint("product_id", "reviewer_user_id", name="uq_review_product_user"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), nullable=False
+    )
+    reviewer_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, index=True
+    )
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    product: Mapped["Product"] = relationship(back_populates="reviews")
+
+
+class ProductImage(Base):
+    """Represents an image associated with a product listing."""
+
+    __tablename__ = "product_images"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    image_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    alt_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    product: Mapped["Product"] = relationship(back_populates="images")

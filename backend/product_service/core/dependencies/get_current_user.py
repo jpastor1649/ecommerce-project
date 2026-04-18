@@ -17,6 +17,7 @@ class AuthenticatedUser:
     """Minimal authenticated user payload resolved from JWT."""
 
     user_id: UUID
+    role: str | None = None
 
 
 async def get_current_user(
@@ -56,4 +57,6 @@ async def get_current_user(
             detail="Invalid token subject",
         ) from exc
 
-    return AuthenticatedUser(user_id=user_id)
+    role_raw = payload.get("role")
+    role = role_raw if isinstance(role_raw, str) and role_raw.strip() else None
+    return AuthenticatedUser(user_id=user_id, role=role)

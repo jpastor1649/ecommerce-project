@@ -4,7 +4,9 @@ import './App.css'
 import Login from './components/login'
 import Register from './components/Register'
 import ProductCatalog from './components/ProductCatalog'
+import ProductDetailPage from './components/ProductDetailPage'
 import UserProfilePage from './components/UserProfilePage'
+import MyProductsPage from './components/MyProductsPage'
 import aicartLogo from './assets/AICart.png'
 import heroImg from './assets/hero.png'
 
@@ -60,7 +62,13 @@ function DashboardLayout() {
             to="products"
             className={({ isActive }) => `dashboard-nav-link${isActive ? ' active' : ''}`}
           >
-            Products
+            Catalog
+          </NavLink>
+          <NavLink
+            to="my-products"
+            className={({ isActive }) => `dashboard-nav-link${isActive ? ' active' : ''}`}
+          >
+            My products
           </NavLink>
           <NavLink
             to="profile"
@@ -85,7 +93,7 @@ function DashboardLayout() {
           <p className="dashboard-hero-kicker">Customer Area</p>
           <h1>Control your shopping experience</h1>
           <p>
-            Switch between product discovery and your personal profile with one click.
+            Navigate between catalog, seller area, and profile from one dashboard.
           </p>
         </div>
         <img src={heroImg} className="dashboard-hero-image" width="170" height="179" alt="" />
@@ -113,6 +121,8 @@ function App() {
       >
         <Route index element={<Navigate to="products" replace />} />
         <Route path="products" element={<ProductCatalog />} />
+        <Route path="products/:productId" element={<ProductDetailPage />} />
+        <Route path="my-products" element={<MyProductsPage />} />
         <Route path="profile" element={<UserProfilePage />} />
       </Route>
     </Routes>

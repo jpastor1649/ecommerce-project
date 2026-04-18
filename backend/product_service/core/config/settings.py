@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     debug: bool = False
     jwt_secret: str = "change-this-secret"
     jwt_algorithm: str = "HS256"
+    max_images_per_product: int = 8
+    forbidden_review_terms: str = ""
 
     class Config:
         """Pydantic settings source configuration."""

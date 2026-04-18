@@ -3,6 +3,16 @@ import './UserProfilePanel.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
+function formatPrice(price) {
+  const value = Number(price)
+  if (Number.isNaN(value)) return String(price)
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
 function createEmptyAddress() {
   return {
     address_line: '',
@@ -40,6 +50,9 @@ async function fetchJson(url, options = {}) {
 export default function UserProfilePage() {
   const [profile, setProfile] = useState(null)
   const [addresses, setAddresses] = useState([])
+  const [myListings, setMyListings] = useState([])
+  const [myReviews, setMyReviews] = useState([])
+  const [reviewsReceived, setReviewsReceived] = useState([])
   const [profileForm, setProfileForm] = useState({ name: '', phone: '' })
   const [addressForm, setAddressForm] = useState(createEmptyAddress())
 
@@ -73,12 +86,27 @@ export default function UserProfilePage() {
         headers: getAuthHeaders(),
       })
 
+      const [authoredReviews, sellerReviews, listings] = await Promise.all([
+        fetchJson(`${API_BASE_URL}/products/mine/reviews`, {
+          headers: getAuthHeaders(),
+        }),
+        fetchJson(`${API_BASE_URL}/products/mine/reviews-received`, {
+          headers: getAuthHeaders(),
+        }),
+        fetchJson(`${API_BASE_URL}/products/mine/listings`, {
+          headers: getAuthHeaders(),
+        }),
+      ])
+
       setProfile(userProfile)
       setProfileForm({
         name: userProfile.name || '',
         phone: userProfile.phone || '',
       })
       setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
+      setMyListings(Array.isArray(listings) ? listings : [])
+      setMyReviews(Array.isArray(authoredReviews) ? authoredReviews : [])
+      setReviewsReceived(Array.isArray(sellerReviews) ? sellerReviews : [])
     } catch (err) {
       if (err.status === 404) {
         setError('No user profile was found in user-service for this account yet.')
@@ -337,6 +365,59 @@ export default function UserProfilePage() {
                   {addressSaving ? 'Saving address...' : 'Save address'}
                 </button>
               </form>
+            </article>
+          </div>
+
+          <div className="user-reviews-grid">
+            <article className="user-address-card">
+              <h3>My products for sale</h3>
+              {myListings.length === 0 ? (
+                <p className="user-panel-state">You do not have active listings yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {myListings.map((product) => (
+                    <li className="address-item" key={product.id}>
+                      <p>{product.name}</p>
+                      <p>Price: {formatPrice(product.price)}</p>
+                      <p>Stock: {product.stock}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+
+            <article className="user-address-card">
+              <h3>Reviews written by you</h3>
+              {myReviews.length === 0 ? (
+                <p className="user-panel-state">You have not reviewed products yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {myReviews.map((review) => (
+                    <li className="address-item" key={review.id}>
+                      <p>Product: {review.product_id}</p>
+                      <p>Rating: {'★'.repeat(review.rating)} ({review.rating}/5)</p>
+                      <p>{review.comment || 'No comment provided.'}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+
+            <article className="user-address-card">
+              <h3>Reviews on your listings</h3>
+              {reviewsReceived.length === 0 ? (
+                <p className="user-panel-state">No reviews received on your products yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {reviewsReceived.map((review) => (
+                    <li className="address-item" key={review.id}>
+                      <p>From user: {review.reviewer_user_id}</p>
+                      <p>Rating: {'★'.repeat(review.rating)} ({review.rating}/5)</p>
+                      <p>{review.comment || 'No comment provided.'}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </article>
           </div>
         </div>

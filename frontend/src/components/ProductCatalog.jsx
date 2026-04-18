@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './ProductCatalog.css'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
@@ -14,6 +15,7 @@ function formatPrice(price) {
 }
 
 export default function ProductCatalog() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -124,10 +126,15 @@ export default function ProductCatalog() {
     }
   }
 
+  const openProductDetail = (productId) => {
+    navigate(`/dashboard/products/${productId}`)
+  }
+
   return (
     <section className="catalog-section">
       <div className="catalog-header">
         <h2>Product Catalog</h2>
+        <p className="catalog-subtitle">Discover products and open each listing in detail.</p>
       </div>
 
       <div className="catalog-controls">
@@ -166,7 +173,19 @@ export default function ProductCatalog() {
       {!loading && !error && hasProducts && (
         <div className="products-grid">
           {products.map((product) => (
-            <article className="product-card" key={product.id}>
+            <article
+              className="product-card clickable"
+              key={product.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openProductDetail(product.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  openProductDetail(product.id)
+                }
+              }}
+            >
               <h3>{product.name}</h3>
               <p className="product-description">
                 {product.description || 'Product without description'}
@@ -177,6 +196,16 @@ export default function ProductCatalog() {
                   {product.stock > 0 ? `Stock: ${product.stock}` : 'Out of stock'}
                 </span>
               </div>
+              <button
+                type="button"
+                className="detail-button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  openProductDetail(product.id)
+                }}
+              >
+                View details
+              </button>
             </article>
           ))}
         </div>
