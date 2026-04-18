@@ -8,7 +8,10 @@ from auth_service.src.dependencies.get_db import get_db
 from auth_service.src.models.user import User
 from auth_service.src.schemas.auth import TokenResponse, UserLogin
 from auth_service.src.schemas.user import UserRegister, UserResponse
-from auth_service.src.services.auth_service import login_user, register_user
+from auth_service.src.services.auth_service import (
+    login_user,
+    register_user,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

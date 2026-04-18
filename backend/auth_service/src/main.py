@@ -8,7 +8,6 @@ from sqlalchemy import text
 
 from auth_service.src.core.database import engine
 from auth_service.src.models.base import Base
-from auth_service.src.models.oauth_account import OAuthAccount  # noqa: F401
 from auth_service.src.models.user import User  # noqa: F401
 from auth_service.src.core.settings import settings
 from auth_service.src.routers.auth import router as auth_router

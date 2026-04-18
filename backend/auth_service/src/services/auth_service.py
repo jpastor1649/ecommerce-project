@@ -21,6 +21,24 @@ publisher = EventPublisher(
     queue_name=settings.user_profile_queue_name,
 )
 
+def _normalize_email(email: str) -> str:
+    return email.lower().strip()
+
+
+def _publish_user_registered_event(auth_user_id: str, full_name: str, email: str) -> None:
+    event_payload = {
+        "auth_user_id": auth_user_id,
+        "full_name": full_name,
+        "email": email,
+        "phone": None,
+        "role": "customer",
+    }
+    if not publisher.publish("AUTH_USER_REGISTERED", event_payload):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to publish user registration event",
+        )
+
 async def register_user(user_data: UserRegister, db: AsyncSession) -> UserResponse:
     """Register a new user and return sanitized user payload."""
     new_user = User(
@@ -39,21 +57,13 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> UserRespon
             detail="A user with this email already exists.",
         ) from exc
 
-    event_payload = {
-        "auth_user_id": str(new_user.id),
-        "full_name": user_data.full_name,
-        "email": str(user_data.email).lower().strip(),
-        "phone": None,
-        "role": "customer",
-    }
-
-    if not publisher.publish("AUTH_USER_REGISTERED", event_payload):
+    normalized_email = _normalize_email(str(user_data.email))
+    try:
+        _publish_user_registered_event(str(new_user.id), user_data.full_name, normalized_email)
+    except HTTPException as exc:
         await db.delete(new_user)
         await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to publish user registration event",
-        )
+        raise exc
 
     return UserResponse.model_validate(new_user)
 
