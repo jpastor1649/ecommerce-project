@@ -1,0 +1,66 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+skinparam shadowing false
+left to right direction
+
+title Presentation View - Frontend Layered Structure (Current)
+
+actor "Authenticated User" as User
+
+package "frontend/src" {
+  package "app" {
+    component "App.jsx\n(Routes + ProtectedRoute)" as App
+  }
+
+  package "widgets" {
+    component "DashboardLayout.jsx" as Dashboard
+  }
+
+  package "pages/auth" {
+    component "LoginPage.jsx" as Login
+    component "RegisterPage.jsx" as Register
+  }
+
+  package "pages/catalog" {
+    component "ProductCatalogPage.jsx" as Catalog
+    component "ProductDetailPage.jsx" as Detail
+  }
+
+  package "pages/seller" {
+    component "MyProductsPage.jsx" as MyProducts
+  }
+
+  package "pages/profile" {
+    component "UserProfilePage.jsx" as Profile
+  }
+
+  package "shared" {
+    component "config/api.js" as ApiConfig
+    component "lib/auth.js" as AuthLib
+  }
+}
+
+component "API Gateway\n(http://localhost:8000)" as Gateway
+
+User --> App : Browser navigation
+App --> Login : /
+App --> Register : /register
+App --> Dashboard : /dashboard/*
+
+Dashboard --> Catalog : /dashboard/products
+Dashboard --> Detail : /dashboard/products/:productId
+Dashboard --> MyProducts : /dashboard/my-products
+Dashboard --> Profile : /dashboard/profile
+
+App --> AuthLib : token guard
+Login --> ApiConfig
+Register --> ApiConfig
+Catalog --> ApiConfig
+Detail --> ApiConfig
+MyProducts --> ApiConfig
+Profile --> ApiConfig
+
+ApiConfig --> Gateway : REST requests
+
+@enduml

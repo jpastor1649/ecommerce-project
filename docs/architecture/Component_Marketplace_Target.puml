@@ -1,0 +1,55 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+skinparam shadowing false
+left to right direction
+
+actor "Client Browser" as Browser
+component "API Gateway\n(Nginx)" as Gateway
+
+component "Auth Service\n(FastAPI)" as Auth
+component "User Service\n(FastAPI)" as User
+component "Product Service\n(FastAPI)" as Product
+component "Order Service\n(FastAPI)" as Order
+component "Payment Service\n(FastAPI)" as Payment
+
+database "Auth DB\n(PostgreSQL)" as AuthDB
+database "User DB\n(PostgreSQL)" as UserDB
+database "Product DB\n(PostgreSQL)" as ProductDB
+database "Order DB\n(PostgreSQL)" as OrderDB
+database "Payment DB\n(PostgreSQL)" as PaymentDB
+
+queue "RabbitMQ\n(Event Bus)" as MQ
+database "Redis\n(NoSQL Cache + Session)" as Redis
+
+Browser --> Gateway : HTTPS REST
+
+Gateway --> Auth : /auth/*
+Gateway --> User : /users/*
+Gateway --> Product : /products/*
+Gateway --> Order : /orders/*
+Gateway --> Payment : /payments/*
+
+Auth --> AuthDB : CRUD users
+User --> UserDB : CRUD profiles/addresses
+Product --> ProductDB : CRUD catalog/reviews/images
+Order --> OrderDB : CRUD orders
+Payment --> PaymentDB : CRUD payments
+
+Auth --> Redis : token session + blacklist
+Product --> Redis : auth session validation\n+ seller/category cache
+
+Auth --> MQ : AUTH_USER_REGISTERED
+Order --> MQ : ORDER_CREATED / ORDER_PAID
+Payment --> MQ : PAYMENT_CONFIRMED
+User --> MQ : consume profile events
+Product --> MQ : consume order/payment events (future)
+
+note bottom of Product
+Layered architecture target:
+- Presentation (routers)
+- Application (services)
+- Domain (models/schemas)
+- Infrastructure (db/redis/mq)
+end note
+@enduml
