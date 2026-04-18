@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import './App.css'
 import Login from './components/login'
 import Register from './components/Register'
 import ProductCatalog from './components/ProductCatalog'
+import UserProfilePage from './components/UserProfilePage'
 import aicartLogo from './assets/AICart.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
@@ -21,7 +20,7 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-function Dashboard() {
+function DashboardLayout() {
   const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -49,12 +48,27 @@ function Dashboard() {
   }
 
   return (
-    <>
+    <div className="dashboard-shell">
       <section className="dashboard-topbar">
         <div className="dashboard-brand">
           <img src={aicartLogo} alt="AICart logo" className="dashboard-brand-logo" />
           <span className="dashboard-brand-name">AICart</span>
         </div>
+
+        <nav className="dashboard-nav" aria-label="Dashboard navigation">
+          <NavLink
+            to="products"
+            className={({ isActive }) => `dashboard-nav-link${isActive ? ' active' : ''}`}
+          >
+            Products
+          </NavLink>
+          <NavLink
+            to="profile"
+            className={({ isActive }) => `dashboard-nav-link${isActive ? ' active' : ''}`}
+          >
+            My profile
+          </NavLink>
+        </nav>
 
         <button
           className="logout-button"
@@ -66,27 +80,21 @@ function Dashboard() {
         </button>
       </section>
 
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Welcome to your E-commerce</h1>
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <p className="dashboard-hero-kicker">Customer Area</p>
+          <h1>Control your shopping experience</h1>
           <p>
-            You have successfully logged in. Start exploring our products.
+            Switch between product discovery and your personal profile with one click.
           </p>
         </div>
+        <img src={heroImg} className="dashboard-hero-image" width="170" height="179" alt="" />
       </section>
 
-      <div className="ticks"></div>
-
-      <ProductCatalog />
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <section className="dashboard-content">
+        <Outlet />
+      </section>
+    </div>
   )
 }
 
@@ -99,10 +107,14 @@ function App() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <DashboardLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<Navigate to="products" replace />} />
+        <Route path="products" element={<ProductCatalog />} />
+        <Route path="profile" element={<UserProfilePage />} />
+      </Route>
     </Routes>
   )
 }
