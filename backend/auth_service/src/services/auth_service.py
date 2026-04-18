@@ -1,0 +1,85 @@
+"""Auth business logic for register/login operations."""
+
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from auth_service.src.events.publisher import EventPublisher
+from auth_service.src.core.settings import settings
+from auth_service.src.core.security import (
+    create_access_token,
+    hash_password,
+    verify_password,
+)
+from auth_service.src.models.user import User
+from auth_service.src.schemas.auth import TokenResponse
+from auth_service.src.schemas.user import UserRegister, UserResponse
+
+publisher = EventPublisher(
+    host=settings.rabbitmq_host,
+    queue_name=settings.user_profile_queue_name,
+)
+
+def _normalize_email(email: str) -> str:
+    return email.lower().strip()
+
+
+def _publish_user_registered_event(auth_user_id: str, full_name: str, email: str) -> None:
+    event_payload = {
+        "auth_user_id": auth_user_id,
+        "full_name": full_name,
+        "email": email,
+        "phone": None,
+        "role": "customer",
+    }
+    if not publisher.publish("AUTH_USER_REGISTERED", event_payload):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to publish user registration event",
+        )
+
+async def register_user(user_data: UserRegister, db: AsyncSession) -> UserResponse:
+    """Register a new user and return sanitized user payload."""
+    new_user = User(
+        email=str(user_data.email).lower().strip(),
+        password_hash=hash_password(user_data.password),
+    )
+    db.add(new_user)
+
+    try:
+        await db.commit()
+        await db.refresh(new_user)
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists.",
+        ) from exc
+    
+    normalized_email = _normalize_email(str(user_data.email))
+    try:
+        _publish_user_registered_event(str(new_user.id), user_data.full_name, normalized_email)
+    except HTTPException as exc:
+        await db.delete(new_user)
+        await db.commit()
+        raise exc
+
+    return UserResponse.model_validate(new_user)
+
+
+async def login_user(email: str, password: str, db: AsyncSession) -> TokenResponse:
+    """Authenticate user credentials and issue JWT token."""
+    normalized_email = email.lower().strip()
+
+    result = await db.execute(select(User).where(User.email == normalized_email))
+    user = result.scalars().first()
+
+    if user is None or not verify_password(password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
+    token = create_access_token(str(user.id))
+    return TokenResponse(access_token=token)

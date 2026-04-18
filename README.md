@@ -172,18 +172,22 @@ cp .env.example .env
 docker compose up --build
 
 # 4. Acceder a la aplicación
-# API backend:                http://localhost:8000
-# API backend (Swagger):      http://localhost:8000/docs
-# API Health                  http://localhost:8000/health
+# Frontend:                   http://localhost:3000
+# API Gateway:                http://localhost:8000
+# API Gateway Health          http://localhost:8000/health
 ```
 
 **Servicios levantados:**
 
 | Servicio | Puerto | Descripción |
 |---|---|---|
-| `backend` | 8000 | API FastAPI |
-| `postgres` | 5432 | PostgreSQL 15 |
-| `redis` | 6379 | Redis — caché NoSQL |
+| `frontend` | 3000 | React + Vite |
+| `api-gateway` | 8000 | Nginx reverse proxy |
+| `auth-service` | 8001 | API de autenticación |
+| `user-service` | 8002 | API de usuarios |
+| `auth-postgres` | 5433 | PostgreSQL auth-service |
+| `user-postgres` | 5432 | PostgreSQL user-service |
+| `rabbitmq` | 5672/15672 | Broker de eventos + panel |
 
 ```bash
 # Para detener
