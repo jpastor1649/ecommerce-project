@@ -56,7 +56,7 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> UserRespon
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         ) from exc
-
+    
     normalized_email = _normalize_email(str(user_data.email))
     try:
         _publish_user_registered_event(str(new_user.id), user_data.full_name, normalized_email)

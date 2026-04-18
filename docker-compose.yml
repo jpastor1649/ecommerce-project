@@ -39,14 +39,17 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: ecommerce_rabbitmq
     restart: unless-stopped
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     ports:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
   auth-service:
     build:
@@ -139,7 +142,7 @@ services:
       api-gateway:
         condition: service_started
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://api-gateway:8000}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     ports:
       - "${FRONTEND_EXTERNAL_PORT:-3000}:3000"
 

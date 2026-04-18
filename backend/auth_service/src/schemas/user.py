@@ -3,7 +3,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from auth_service.src.core.security import check_password
 
 
 class UserRegister(BaseModel):
@@ -13,7 +15,15 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
 
+    @field_validator("password")
+    def validate_password(cls, v):
+        check_password(v)
+        return v
 
+    @field_validator("email")
+    def normalize_email(cls, v):
+        return v.lower().strip()
+    
 class UserResponse(BaseModel):
     """Schema for user response without sensitive fields."""
 
