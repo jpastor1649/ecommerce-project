@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { API_BASE_URL } from '../../shared/config/api'
+import { getAuthHeaders } from '../../shared/lib/auth'
 import './ProductDetailPage.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
 
 function formatPrice(price) {
   const value = Number(price)
@@ -12,14 +12,6 @@ function formatPrice(price) {
     currency: 'COP',
     maximumFractionDigits: 0,
   }).format(value)
-}
-
-function getAuthHeaders() {
-  const token = sessionStorage.getItem('authToken')
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }
 }
 
 function Stars({ rating }) {

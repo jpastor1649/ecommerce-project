@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import './ProductCatalog.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/api'
+import { getAuthHeaders } from '../../shared/lib/auth'
+import './ProductCatalogPage.css'
 
 function formatPrice(price) {
   const value = Number(price)
@@ -14,7 +14,7 @@ function formatPrice(price) {
   }).format(value)
 }
 
-export default function ProductCatalog() {
+export default function ProductCatalogPage() {
   const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -24,14 +24,6 @@ export default function ProductCatalog() {
   const [error, setError] = useState('')
 
   const hasProducts = useMemo(() => products.length > 0, [products])
-
-  const getAuthHeaders = () => {
-    const token = sessionStorage.getItem('authToken')
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    }
-  }
 
   const fetchCategories = async () => {
     const response = await fetch(`${API_BASE_URL}/products/categories`, {

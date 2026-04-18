@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import './UserProfilePanel.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+import { API_BASE_URL } from '../../shared/config/api'
+import { getAuthHeaders } from '../../shared/lib/auth'
+import './UserProfilePage.css'
 
 function formatPrice(price) {
   const value = Number(price)
@@ -21,14 +21,6 @@ function createEmptyAddress() {
     country: '',
     postal_code: '',
     is_default: false,
-  }
-}
-
-function getAuthHeaders() {
-  const token = sessionStorage.getItem('authToken')
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
   }
 }
 
