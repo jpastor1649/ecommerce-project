@@ -1,5 +1,5 @@
-from .models import User, Address
-from app.events.publisher import EventPublisher
+from ..models.models import User, Address
+from ..events.publisher import EventPublisher
 from fastapi import HTTPException
 
 publisher = EventPublisher()
@@ -47,6 +47,36 @@ class UserService:
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+        return user
+
+    def get_user_by_email(self, email):
+        normalized_email = str(email).strip().lower()
+        user = self.db.query(User).filter(User.email == normalized_email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user
+
+    def update_user(self, user_id, user_data):
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        updates = user_data.dict(exclude_unset=True)
+        if not updates:
+            return user
+
+        if "name" in updates and isinstance(updates["name"], str):
+            updates["name"] = updates["name"].strip()
+
+        if "phone" in updates and isinstance(updates["phone"], str):
+            cleaned_phone = updates["phone"].strip()
+            updates["phone"] = cleaned_phone or None
+
+        for field, value in updates.items():
+            setattr(user, field, value)
+
+        self.db.commit()
+        self.db.refresh(user)
         return user
     
     def add_address(self, user_id, address_data):

@@ -1,22 +1,27 @@
-from fastapi import FastAPI
-from .db import Base, engine
-from .events.user_profile_consumer import UserProfileEventConsumer
-from .routes import router
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="User Service")
+from fastapi import FastAPI
+from .core.db import Base, engine
+from .events.user_profile_consumer import UserProfileEventConsumer
+from .routers.router import router
+
 consumer = UserProfileEventConsumer()
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Manage startup and shutdown resources for user-service."""
     # Ensure local schema exists when service boots.
     Base.metadata.create_all(bind=engine)
     consumer.start()
 
+    try:
+        yield
+    finally:
+        consumer.stop()
 
-@app.on_event("shutdown")
-def on_shutdown() -> None:
-    consumer.stop()
+
+app = FastAPI(title="User Service", lifespan=lifespan)
 
 
 app.include_router(router)

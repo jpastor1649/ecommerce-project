@@ -1,8 +1,15 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-from .db import SessionLocal
-from .services import UserService
-from .schemas import AddressCreate, AddressResponse, ProfileCreate, UserCreate, UserResponse
+from ..core.db import SessionLocal
+from ..services.services import UserService
+from ..schemas.schemas import (
+    AddressCreate,
+    AddressResponse,
+    ProfileCreate,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+)
 
 router = APIRouter()
 
@@ -27,10 +34,21 @@ def create_profile(profile: ProfileCreate, db: Session = Depends(get_db)):
     service = UserService(db)
     return service.create_profile(profile)
 
+@router.get("/users/by-email", response_model=UserResponse)
+def get_user_by_email(email: str, db: Session = Depends(get_db)):
+    service = UserService(db)
+    return service.get_user_by_email(email)
+
 @router.get("/users/{user_id}", response_model=UserResponse)
 def get_user(user_id: str, db: Session = Depends(get_db)):
     service = UserService(db)
     return service.get_user(user_id)
+
+
+@router.patch("/users/{user_id}", response_model=UserResponse)
+def update_user(user_id: str, payload: UserUpdate, db: Session = Depends(get_db)):
+    service = UserService(db)
+    return service.update_user(user_id, payload)
 
 @router.post(
     "/users/{user_id}/addresses",

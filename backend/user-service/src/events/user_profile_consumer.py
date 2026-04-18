@@ -8,9 +8,9 @@ import time
 import pika
 from fastapi import HTTPException
 
-from app.db import SessionLocal
-from app.schemas import ProfileCreate
-from app.services import UserService
+from ..core.db import SessionLocal
+from ..schemas.schemas import ProfileCreate
+from ..services.services import UserService
 
 
 class UserProfileEventConsumer:

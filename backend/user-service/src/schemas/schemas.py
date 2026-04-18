@@ -36,10 +36,17 @@ class ProfileCreate(BaseModel):
     phone: Optional[str] = None
     role: Optional[str] = "customer"
 
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
+    phone: Optional[str] = Field(default=None, max_length=40)
+
 class UserResponse(BaseModel):
     id: UUID
     name: str
     email: str
+    phone: Optional[str] = None
+    role: Optional[str] = None
 
     class Config:
         from_attributes = True
