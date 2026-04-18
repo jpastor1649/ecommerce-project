@@ -1,66 +1,95 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: ecommerce_postgres
+  auth-postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce_auth_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${AUTH_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AUTH_POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${AUTH_POSTGRES_EXTERNAL_PORT:-5433}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_POSTGRES_USER} -d ${AUTH_POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: ecommerce_redis
+  user-postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce_user_postgres
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    environment:
+      POSTGRES_USER: ${USER_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${USER_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${USER_POSTGRES_DB}
     ports:
-      - "6379:6379"
+      - "${USER_POSTGRES_EXTERNAL_PORT:-5432}:5432"
     volumes:
-      - redis_data:/data
+      - user_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "pg_isready -U ${USER_POSTGRES_USER} -d ${USER_POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  backend:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ecommerce_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    container_name: ecommerce_backend
+      dockerfile: auth_service/Dockerfile
+    container_name: ecommerce_auth_service
     restart: unless-stopped
-    env_file:
-      - .env
     depends_on:
-      postgres:
+      auth-postgres:
         condition: service_healthy
-      redis:
+      rabbitmq:
         condition: service_healthy
-    ports:
-      - "8000:8000"
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: ecommerce_frontend
-    restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL}
-    depends_on:
-      - backend
+      DATABASE_URL: ${AUTH_DATABASE_URL}
+      APP_NAME: ${AUTH_APP_NAME:-Auth Service}
+      DEBUG: ${AUTH_DEBUG:-false}
+      JWT_SECRET: ${AUTH_JWT_SECRET}
+      JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${AUTH_JWT_EXPIRE_MINUTES:-60}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
+    command: uvicorn auth_service.src.main:app --host 0.0.0.0 --port 8001
     ports:
-      - "3000:3000"
+      - "${AUTH_SERVICE_EXTERNAL_PORT:-8001}:8001"
+
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+    container_name: ecommerce_user_service
+    restart: unless-stopped
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${USER_DATABASE_URL}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
+    ports:
+      - "${USER_SERVICE_EXTERNAL_PORT:-8002}:8000"
 
 volumes:
-  postgres_data:
-  redis_data:
+  auth_postgres_data:
+  user_postgres_data:
