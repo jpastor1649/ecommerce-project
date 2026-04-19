@@ -1,4 +1,3 @@
-'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'

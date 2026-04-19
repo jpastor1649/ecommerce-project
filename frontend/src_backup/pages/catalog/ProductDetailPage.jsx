@@ -1,6 +1,5 @@
-'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useNavigate, useParams } from 'react-router-dom'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'
 import './ProductDetailPage.css'
@@ -20,7 +19,7 @@ function Stars({ rating }) {
 }
 
 export default function ProductDetailPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { productId } = useParams()
 
   const [product, setProduct] = useState(null)
@@ -220,7 +219,7 @@ export default function ProductDetailPage() {
   if (error) {
     return (
       <section className="product-detail-section">
-        <button type="button" className="detail-back" onClick={() => router.push('/dashboard/products')}>
+        <button type="button" className="detail-back" onClick={() => navigate('/dashboard/products')}>
           Back to catalog
         </button>
         <p className="detail-error">{error}</p>
@@ -234,7 +233,7 @@ export default function ProductDetailPage() {
 
   return (
     <section className="product-detail-section">
-      <button type="button" className="detail-back" onClick={() => router.push('/dashboard/products')}>
+      <button type="button" className="detail-back" onClick={() => navigate('/dashboard/products')}>
         Back to catalog
       </button>
 

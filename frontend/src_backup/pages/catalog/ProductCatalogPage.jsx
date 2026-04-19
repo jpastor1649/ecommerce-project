@@ -1,6 +1,5 @@
-'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'
 import './ProductCatalogPage.css'
@@ -16,7 +15,7 @@ function formatPrice(price) {
 }
 
 export default function ProductCatalogPage() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -141,7 +140,7 @@ export default function ProductCatalogPage() {
   }
 
   const openProductDetail = (productId) => {
-    router.push(`/dashboard/products/${productId}`)
+    navigate(`/dashboard/products/${productId}`)
   }
 
   return (

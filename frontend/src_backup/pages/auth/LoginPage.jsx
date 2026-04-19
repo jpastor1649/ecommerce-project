@@ -1,7 +1,5 @@
-'use client'
 import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../../shared/config/api'
 import { fetchWithGatewayRetry } from '../../shared/lib/http'
 import { setAuthToken } from '../../shared/lib/auth'
@@ -13,7 +11,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -31,7 +29,7 @@ const LoginPage = () => {
 
       if (response.ok) {
         setAuthToken(data.access_token)
-        router.push('/dashboard')
+        navigate('/dashboard')
       } else {
         if ([502, 503, 504].includes(response.status)) {
           setError('Services are warming up. Please try again in a few seconds.')
@@ -82,7 +80,7 @@ const LoginPage = () => {
           </button>
         </form>
         <p className="register-link">
-          Don&apos;t have an account? <Link href="/register">Sign up here</Link>
+          Don&apos;t have an account? <Link to="/register">Sign up here</Link>
         </p>
       </div>
     </div>
