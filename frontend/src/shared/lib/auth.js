@@ -1,18 +1,19 @@
 export function setAuthToken(token) {
-  localStorage.setItem('auth_token', token)
+  document.cookie = `auth_token=${token}; path=/; SameSite=Strict`
 }
 
 export function getAuthToken() {
-  return localStorage.getItem('auth_token')
+  const match = document.cookie.match(/(?:^|; )auth_token=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
 }
 
 export function clearAuthToken() {
-  localStorage.removeItem('auth_token')
+  document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
 }
 
 export function getAuthHeaders() {
   const token = getAuthToken()
-  const headers = { "Content-Type": "application/json" }
-  if (token) headers["Authorization"] = `Bearer ${token}`
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
 }

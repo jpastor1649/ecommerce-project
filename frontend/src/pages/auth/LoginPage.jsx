@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { API_BASE_URL } from '../../shared/config/api'
 import { fetchWithGatewayRetry } from '../../shared/lib/http'
 import { setAuthToken } from '../../shared/lib/auth'
+import Image from 'next/image'
 import aicartLogo from '../../assets/AICart.png'
 import './LoginPage.css'
 
@@ -25,7 +26,7 @@ const LoginPage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-      }, 3, 600)
+      }, 3)
 
       const data = await response.json().catch(() => ({}))
 
@@ -36,7 +37,7 @@ const LoginPage = () => {
         if ([502, 503, 504].includes(response.status)) {
           setError('Services are warming up. Please try again in a few seconds.')
         } else {
-          setError(data.detail || 'Invalid credentials')
+          setError(typeof data.detail === 'string' ? data.detail : Array.isArray(data.detail) ? data.detail.map(e => e.msg).join(', ') : 'Invalid credentials')
         }
       }
     } catch (err) {
@@ -50,7 +51,7 @@ const LoginPage = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="auth-brand">
-          <img src={aicartLogo} alt="AICart logo" className="auth-brand-logo" />
+          <img src={aicartLogo.src} alt="AICart logo" className="auth-brand-logo" />
           <p className="auth-brand-name">AICart</p>
         </div>
 
