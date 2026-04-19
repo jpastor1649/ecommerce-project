@@ -1,6 +1,9 @@
+'use client'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { API_BASE_URL } from '../../shared/config/api'
+import { fetchWithGatewayRetry } from '../../shared/lib/http'
 import { setAuthToken } from '../../shared/lib/auth'
 import aicartLogo from '../../assets/AICart.png'
 import './LoginPage.css'
@@ -10,7 +13,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -18,19 +21,23 @@ const LoginPage = () => {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetchWithGatewayRetry(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-      })
+      }, 3, 600)
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
         setAuthToken(data.access_token)
-        navigate('/dashboard')
+        router.push('/dashboard')
       } else {
-        setError(data.detail || 'Invalid credentials')
+        if ([502, 503, 504].includes(response.status)) {
+          setError('Services are warming up. Please try again in a few seconds.')
+        } else {
+          setError(data.detail || 'Invalid credentials')
+        }
       }
     } catch (err) {
       setError('Server connection error')
@@ -75,7 +82,7 @@ const LoginPage = () => {
           </button>
         </form>
         <p className="register-link">
-          Don&apos;t have an account? <Link to="/register">Sign up here</Link>
+          Don&apos;t have an account? <Link href="/register">Sign up here</Link>
         </p>
       </div>
     </div>

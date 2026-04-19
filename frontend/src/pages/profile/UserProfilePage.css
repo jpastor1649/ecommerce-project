@@ -260,7 +260,8 @@
 
 .user-panel-state,
 .user-panel-error,
-.user-panel-success {
+.user-panel-success,
+.user-panel-warning {
   margin: 4px 0 10px;
   font-size: 14px;
 }
@@ -271,6 +272,19 @@
 
 .user-panel-success {
   color: #166534;
+}
+
+.user-panel-warning {
+  color: #854d0e;
+  background: #fef3c7;
+  border: 1px solid #facc15;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.user-reviews-grid .user-panel-warning {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 @media (max-width: 768px) {

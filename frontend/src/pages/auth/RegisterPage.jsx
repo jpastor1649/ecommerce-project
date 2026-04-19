@@ -1,6 +1,9 @@
+'use client'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { API_BASE_URL } from '../../shared/config/api'
+import { fetchWithGatewayRetry } from '../../shared/lib/http'
 import aicartLogo from '../../assets/AICart.png'
 import './RegisterPage.css'
 
@@ -12,7 +15,7 @@ const RegisterPage = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,19 +30,23 @@ const RegisterPage = () => {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetchWithGatewayRetry(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name: fullName, email, password }),
-      })
+      }, 3, 600)
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
         setSuccess('User created successfully')
-        setTimeout(() => navigate('/'), 2000)
+        setTimeout(() => router.push('/'), 2000)
       } else {
-        setError(data.detail || 'Error registering user')
+        if ([502, 503, 504].includes(response.status)) {
+          setError('Services are warming up. Please try again in a few seconds.')
+        } else {
+          setError(data.detail || 'Error registering user')
+        }
       }
     } catch (err) {
       setError('Server connection error')
@@ -105,7 +112,7 @@ const RegisterPage = () => {
           </button>
         </form>
         <p className="login-link">
-          Already have an account? <Link to="/">Sign in here</Link>
+          Already have an account? <Link href="/">Sign in here</Link>
         </p>
       </div>
     </div>

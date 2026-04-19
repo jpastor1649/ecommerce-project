@@ -1,5 +1,6 @@
+'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'
 import './ProductCatalogPage.css'
@@ -15,13 +16,14 @@ function formatPrice(price) {
 }
 
 export default function ProductCatalogPage() {
-  const navigate = useNavigate()
+  const router = useRouter()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [searchText, setSearchText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
 
   const hasProducts = useMemo(() => products.length > 0, [products])
 
@@ -30,8 +32,7 @@ export default function ProductCatalogPage() {
       headers: getAuthHeaders()
     })
     if (!response.ok) throw new Error('Could not load categories')
-    const data = await response.json()
-    setCategories(data)
+    return await response.json()
   }
 
   const fetchProducts = async (categorySlug = '') => {
@@ -44,8 +45,7 @@ export default function ProductCatalogPage() {
       headers: getAuthHeaders()
     })
     if (!response.ok) throw new Error('Could not load products')
-    const data = await response.json()
-    setProducts(data)
+    return await response.json()
   }
 
   const searchProducts = async (query) => {
@@ -61,15 +61,32 @@ export default function ProductCatalogPage() {
       headers: getAuthHeaders()
     })
     if (!response.ok) throw new Error('Search request failed')
-    const data = await response.json()
-    setProducts(data)
+    return await response.json()
   }
 
   const loadInitialData = async () => {
     setLoading(true)
     setError('')
+    setWarning('')
     try {
-      await Promise.all([fetchCategories(), fetchProducts(selectedCategory)])
+      const [categoriesResult, productsResult] = await Promise.allSettled([
+        fetchCategories(),
+        fetchProducts(selectedCategory),
+      ])
+
+      if (categoriesResult.status === 'fulfilled') {
+        setCategories(Array.isArray(categoriesResult.value) ? categoriesResult.value : [])
+      } else {
+        setCategories([])
+        setWarning('Categories are temporarily unavailable. You can still browse products.')
+      }
+
+      if (productsResult.status === 'fulfilled') {
+        setProducts(Array.isArray(productsResult.value) ? productsResult.value : [])
+      } else {
+        setProducts([])
+        throw new Error('Could not load products')
+      }
     } catch (err) {
       setError(err.message || 'Error loading data')
     } finally {
@@ -88,9 +105,11 @@ export default function ProductCatalogPage() {
     setSearchText('')
     setLoading(true)
     setError('')
+    setWarning('')
 
     try {
-      await fetchProducts(categorySlug)
+      const data = await fetchProducts(categorySlug)
+      setProducts(Array.isArray(data) ? data : [])
     } catch (err) {
       setError(err.message || 'Error filtering products')
     } finally {
@@ -104,12 +123,15 @@ export default function ProductCatalogPage() {
     const query = searchText.trim()
     setLoading(true)
     setError('')
+    setWarning('')
 
     try {
       if (!query) {
-        await fetchProducts(selectedCategory)
+        const data = await fetchProducts(selectedCategory)
+        setProducts(Array.isArray(data) ? data : [])
       } else {
-        await searchProducts(query)
+        const data = await searchProducts(query)
+        setProducts(Array.isArray(data) ? data : [])
       }
     } catch (err) {
       setError(err.message || 'Error searching products')
@@ -119,7 +141,7 @@ export default function ProductCatalogPage() {
   }
 
   const openProductDetail = (productId) => {
-    navigate(`/dashboard/products/${productId}`)
+    router.push(`/dashboard/products/${productId}`)
   }
 
   return (
@@ -158,6 +180,7 @@ export default function ProductCatalogPage() {
 
       {loading && <p className="catalog-state">Loading products...</p>}
       {error && <p className="catalog-error">{error}</p>}
+      {!error && warning && <p className="catalog-warning">{warning}</p>}
       {!loading && !error && !hasProducts && (
         <p className="catalog-state">No products to display.</p>
       )}

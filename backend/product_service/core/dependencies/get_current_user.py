@@ -1,6 +1,7 @@
 """Authentication dependency for protected product endpoints."""
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from product_service.core.config.settings import settings
 from product_service.core.redis_client import get_redis_client
 
 bearer_scheme = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def _session_key(token: str) -> str:
@@ -45,16 +47,26 @@ async def get_current_user(
     token = credentials.credentials
 
     redis_client = get_redis_client()
-    if await redis_client.exists(_blacklist_key(token)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token revoked",
-        )
-    if settings.require_redis_session and not await redis_client.exists(_session_key(token)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired",
-        )
+    try:
+        if await redis_client.exists(_blacklist_key(token)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token revoked",
+            )
+        if settings.require_redis_session and not await redis_client.exists(_session_key(token)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        if not settings.redis_fail_open:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Session store unavailable",
+            )
+        logger.warning("Redis unavailable while validating token; continuing with JWT fallback")
 
     try:
         payload = jwt.decode(

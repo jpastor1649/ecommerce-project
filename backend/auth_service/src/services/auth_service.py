@@ -1,6 +1,7 @@
 """Auth business logic for register/login operations."""
 
 import hashlib
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -26,6 +27,7 @@ publisher = EventPublisher(
     host=settings.rabbitmq_host,
     queue_name=settings.user_profile_queue_name,
 )
+logger = logging.getLogger(__name__)
 
 def _normalize_email(email: str) -> str:
     return email.lower().strip()
@@ -62,18 +64,34 @@ async def store_token_session(token: str, user_id: str) -> None:
     """Store active token session in Redis."""
     redis_client = get_redis_client()
     ttl = _token_ttl_seconds(token)
-    await redis_client.set(_session_key(token), user_id, ex=ttl)
+    try:
+        await redis_client.set(_session_key(token), user_id, ex=ttl)
+    except Exception:
+        if not settings.redis_fail_open:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Session store unavailable",
+            )
+        logger.warning("Redis unavailable while storing auth session for user_id=%s", user_id)
 
 
 async def revoke_token(token: str) -> None:
     """Blacklist a token in Redis until it expires."""
     redis_client = get_redis_client()
     ttl = _token_ttl_seconds(token)
-    await redis_client.set(_blacklist_key(token), "1", ex=ttl)
-    await redis_client.delete(_session_key(token))
+    try:
+        await redis_client.set(_blacklist_key(token), "1", ex=ttl)
+        await redis_client.delete(_session_key(token))
+    except Exception:
+        if not settings.redis_fail_open:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Session store unavailable",
+            )
+        logger.warning("Redis unavailable while revoking auth token")
 
 
-def _publish_user_registered_event(auth_user_id: str, full_name: str, email: str) -> None:
+def _publish_user_registered_event(auth_user_id: str, full_name: str, email: str) -> bool:
     event_payload = {
         "auth_user_id": auth_user_id,
         "full_name": full_name,
@@ -81,11 +99,7 @@ def _publish_user_registered_event(auth_user_id: str, full_name: str, email: str
         "phone": None,
         "role": "customer",
     }
-    if not publisher.publish("AUTH_USER_REGISTERED", event_payload):
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Failed to publish user registration event",
-        )
+    return publisher.publish("AUTH_USER_REGISTERED", event_payload)
 
 async def register_user(user_data: UserRegister, db: AsyncSession) -> UserResponse:
     """Register a new user and return sanitized user payload."""
@@ -106,12 +120,13 @@ async def register_user(user_data: UserRegister, db: AsyncSession) -> UserRespon
         ) from exc
     
     normalized_email = _normalize_email(str(user_data.email))
-    try:
-        _publish_user_registered_event(str(new_user.id), user_data.full_name, normalized_email)
-    except HTTPException as exc:
-        await db.delete(new_user)
-        await db.commit()
-        raise exc
+    published = _publish_user_registered_event(str(new_user.id), user_data.full_name, normalized_email)
+    if not published:
+        # Keep auth registration available even when asynchronous profile propagation is down.
+        logger.warning(
+            "AUTH_USER_REGISTERED event could not be published for user_id=%s",
+            new_user.id,
+        )
 
     return UserResponse.model_validate(new_user)
 

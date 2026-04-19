@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://redis:6379/0"
     auth_session_prefix: str = "auth:session"
     auth_blacklist_prefix: str = "auth:blacklist"
+    require_redis_session: bool = True
+    redis_fail_open: bool = True
 
     class Config:
         """Pydantic settings source configuration."""
