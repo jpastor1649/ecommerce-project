@@ -30,6 +30,7 @@ export default function ProductDetailPage() {
   const [reviewerLabels, setReviewerLabels] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loadWarning, setLoadWarning] = useState('')
   const [reviewing, setReviewing] = useState(false)
   const [reviewError, setReviewError] = useState('')
   const [reviewSuccess, setReviewSuccess] = useState('')
@@ -44,34 +45,51 @@ export default function ProductDetailPage() {
   const loadProductDetail = async () => {
     setLoading(true)
     setError('')
+    setLoadWarning('')
     try {
-      const [productResponse, reviewsResponse, categoriesResponse, imagesResponse] = await Promise.all([
+      const warningMessages = []
+
+      const [
+        productResult,
+        reviewsResult,
+        categoriesResult,
+        imagesResult,
+      ] = await Promise.allSettled([
         fetch(`${API_BASE_URL}/products/${productId}`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/products/${productId}/reviews`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/products/categories`, { headers: getAuthHeaders() }),
         fetch(`${API_BASE_URL}/products/${productId}/images`, { headers: getAuthHeaders() }),
       ])
 
+      if (productResult.status !== 'fulfilled') {
+        throw new Error('Could not load product details')
+      }
+
+      const productResponse = productResult.value
+      const reviewsResponse = reviewsResult.status === 'fulfilled' ? reviewsResult.value : null
+      const categoriesResponse = categoriesResult.status === 'fulfilled' ? categoriesResult.value : null
+      const imagesResponse = imagesResult.status === 'fulfilled' ? imagesResult.value : null
+
       const productData = await productResponse.json().catch(() => ({}))
-      const reviewsData = await reviewsResponse.json().catch(() => ([]))
-      const categoriesData = await categoriesResponse.json().catch(() => ([]))
-      const imagesData = await imagesResponse.json().catch(() => ([]))
+      const reviewsData = reviewsResponse ? await reviewsResponse.json().catch(() => ([])) : []
+      const categoriesData = categoriesResponse ? await categoriesResponse.json().catch(() => ([])) : []
+      const imagesData = imagesResponse ? await imagesResponse.json().catch(() => ([])) : []
 
       if (!productResponse.ok) {
         throw new Error(
           typeof productData?.detail === 'string' ? productData.detail : 'Could not load product details'
         )
       }
-      if (!reviewsResponse.ok) {
-        throw new Error('Could not load product reviews')
+      if (!reviewsResponse || !reviewsResponse.ok) {
+        warningMessages.push('Reviews are temporarily unavailable.')
       }
 
-      if (!categoriesResponse.ok) {
-        throw new Error('Could not load categories')
+      if (!categoriesResponse || !categoriesResponse.ok) {
+        warningMessages.push('Category labels are temporarily unavailable.')
       }
 
-      if (!imagesResponse.ok) {
-        throw new Error('Could not load product gallery')
+      if (!imagesResponse || !imagesResponse.ok) {
+        warningMessages.push('Product gallery is temporarily unavailable.')
       }
 
       const sellerResponse = await fetch(`${API_BASE_URL}/users/${productData.seller_user_id}`, {
@@ -100,7 +118,7 @@ export default function ProductDetailPage() {
       const safeReviews = Array.isArray(reviewsData) ? reviewsData : []
       const reviewerIds = [...new Set(safeReviews.map((review) => review.reviewer_user_id).filter(Boolean))]
       if (reviewerIds.length) {
-        const labelEntries = await Promise.all(reviewerIds.map(async (reviewerId) => {
+        const labelResults = await Promise.allSettled(reviewerIds.map(async (reviewerId) => {
           const userResponse = await fetch(`${API_BASE_URL}/users/${reviewerId}`, {
             headers: getAuthHeaders(),
           })
@@ -119,6 +137,15 @@ export default function ProductDetailPage() {
 
           return [reviewerId, String(reviewerId)]
         }))
+
+        const labelEntries = labelResults
+          .filter((entry) => entry.status === 'fulfilled')
+          .map((entry) => entry.value)
+
+        if (labelResults.some((entry) => entry.status === 'rejected')) {
+          warningMessages.push('Some reviewer labels could not be loaded.')
+        }
+
         setReviewerLabels(Object.fromEntries(labelEntries))
       } else {
         setReviewerLabels({})
@@ -128,6 +155,10 @@ export default function ProductDetailPage() {
         ? categoriesData.find((category) => category.id === productData.category_id)
         : null
       setCategoryName(matchedCategory?.name || 'Unknown category')
+
+      if (warningMessages.length) {
+        setLoadWarning(warningMessages.join(' '))
+      }
 
     } catch (err) {
       setError(err.message || 'Could not load product details')
@@ -205,6 +236,8 @@ export default function ProductDetailPage() {
       <button type="button" className="detail-back" onClick={() => navigate('/dashboard/products')}>
         Back to catalog
       </button>
+
+      {loadWarning && <p className="detail-warning">{loadWarning}</p>}
 
       <article className="detail-card">
         <div className="detail-main">

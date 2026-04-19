@@ -55,6 +55,7 @@ export default function UserProfilePage() {
   const [addressSaving, setAddressSaving] = useState(false)
 
   const [error, setError] = useState('')
+  const [productDataWarning, setProductDataWarning] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
   const [addressError, setAddressError] = useState('')
@@ -63,6 +64,7 @@ export default function UserProfilePage() {
   const loadUserData = async () => {
     setLoading(true)
     setError('')
+    setProductDataWarning('')
 
     try {
       const authUser = await fetchJson(`${API_BASE_URL}/auth/me`, {
@@ -80,7 +82,14 @@ export default function UserProfilePage() {
         headers: getAuthHeaders(),
       })
 
-      const [authoredReviews, sellerReviews, listings] = await Promise.all([
+      setProfile(userProfile)
+      setProfileForm({
+        name: userProfile.name || '',
+        phone: userProfile.phone || '',
+      })
+      setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
+
+      const productCalls = await Promise.allSettled([
         fetchJson(`${API_BASE_URL}/products/mine/reviews`, {
           headers: getAuthHeaders(),
         }),
@@ -92,12 +101,15 @@ export default function UserProfilePage() {
         }),
       ])
 
-      setProfile(userProfile)
-      setProfileForm({
-        name: userProfile.name || '',
-        phone: userProfile.phone || '',
-      })
-      setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
+      const authoredReviews = productCalls[0].status === 'fulfilled' ? productCalls[0].value : []
+      const sellerReviews = productCalls[1].status === 'fulfilled' ? productCalls[1].value : []
+      const listings = productCalls[2].status === 'fulfilled' ? productCalls[2].value : []
+
+      const hasProductFailures = productCalls.some((call) => call.status === 'rejected')
+      if (hasProductFailures) {
+        setProductDataWarning('Product service is unavailable. Profile data remains available, but listing/review sections may be incomplete.')
+      }
+
       const safeListings = Array.isArray(listings) ? listings : []
       const safeMyReviews = Array.isArray(authoredReviews) ? authoredReviews : []
       const safeSellerReviews = Array.isArray(sellerReviews) ? sellerReviews : []
@@ -115,14 +127,24 @@ export default function UserProfilePage() {
         ),
       ]
       const missingProductIds = reviewedProductIds.filter((id) => !listingLabelMap[id])
-      const fetchedProductLabels = await Promise.all(missingProductIds.map(async (id) => {
-        const productResponse = await fetchJson(`${API_BASE_URL}/products/${id}`, {
-          headers: getAuthHeaders(),
-        })
-        return [id, productResponse?.name || id]
-      }).map((promise) => promise.catch(() => null)))
 
-      const productEntries = fetchedProductLabels.filter(Boolean)
+      const fetchedProductLabels = await Promise.allSettled(
+        missingProductIds.map(async (id) => {
+          const productResponse = await fetchJson(`${API_BASE_URL}/products/${id}`, {
+            headers: getAuthHeaders(),
+          })
+          return [id, productResponse?.name || id]
+        })
+      )
+
+      const productEntries = fetchedProductLabels
+        .filter((entry) => entry.status === 'fulfilled')
+        .map((entry) => entry.value)
+
+      if (!hasProductFailures && fetchedProductLabels.some((entry) => entry.status === 'rejected')) {
+        setProductDataWarning('Some product labels could not be loaded at this moment.')
+      }
+
       setProductLabels({
         ...listingLabelMap,
         ...Object.fromEntries(productEntries),
@@ -411,6 +433,8 @@ export default function UserProfilePage() {
           </div>
 
           <div className="user-reviews-grid">
+            {productDataWarning && <p className="user-panel-warning">{productDataWarning}</p>}
+
             <article className="user-address-card">
               <h3>My products for sale</h3>
               {myListings.length === 0 ? (

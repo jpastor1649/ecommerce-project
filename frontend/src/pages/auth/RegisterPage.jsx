@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../../shared/config/api'
+import { fetchWithGatewayRetry } from '../../shared/lib/http'
 import aicartLogo from '../../assets/AICart.png'
 import './RegisterPage.css'
 
@@ -27,19 +28,23 @@ const RegisterPage = () => {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetchWithGatewayRetry(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name: fullName, email, password }),
-      })
+      }, 3, 600)
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
         setSuccess('User created successfully')
         setTimeout(() => navigate('/'), 2000)
       } else {
-        setError(data.detail || 'Error registering user')
+        if ([502, 503, 504].includes(response.status)) {
+          setError('Services are warming up. Please try again in a few seconds.')
+        } else {
+          setError(data.detail || 'Error registering user')
+        }
       }
     } catch (err) {
       setError('Server connection error')

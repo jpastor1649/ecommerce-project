@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../../shared/config/api'
+import { fetchWithGatewayRetry } from '../../shared/lib/http'
 import { setAuthToken } from '../../shared/lib/auth'
 import aicartLogo from '../../assets/AICart.png'
 import './LoginPage.css'
@@ -18,19 +19,23 @@ const LoginPage = () => {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetchWithGatewayRetry(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-      })
+      }, 3, 600)
 
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (response.ok) {
         setAuthToken(data.access_token)
         navigate('/dashboard')
       } else {
-        setError(data.detail || 'Invalid credentials')
+        if ([502, 503, 504].includes(response.status)) {
+          setError('Services are warming up. Please try again in a few seconds.')
+        } else {
+          setError(data.detail || 'Invalid credentials')
+        }
       }
     } catch (err) {
       setError('Server connection error')
