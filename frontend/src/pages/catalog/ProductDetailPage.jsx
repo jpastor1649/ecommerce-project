@@ -27,6 +27,7 @@ export default function ProductDetailPage() {
   const [sellerName, setSellerName] = useState('Unknown seller')
   const [images, setImages] = useState([])
   const [reviews, setReviews] = useState([])
+  const [reviewerLabels, setReviewerLabels] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [reviewing, setReviewing] = useState(false)
@@ -78,20 +79,56 @@ export default function ProductDetailPage() {
       })
       const sellerData = await sellerResponse.json().catch(() => ({}))
 
+      if (sellerResponse.ok) {
+        setSellerName(sellerData?.name || sellerData?.email || 'Unknown seller')
+      } else {
+        const authSellerResponse = await fetch(`${API_BASE_URL}/auth/users/${productData.seller_user_id}`, {
+          headers: getAuthHeaders(),
+        })
+        const authSellerData = await authSellerResponse.json().catch(() => ({}))
+        if (authSellerResponse.ok) {
+          setSellerName(authSellerData?.email || 'Unknown seller')
+        } else {
+          setSellerName('Unknown seller')
+        }
+      }
+
       setProduct(productData)
       setReviews(Array.isArray(reviewsData) ? reviewsData : [])
       setImages(Array.isArray(imagesData) ? imagesData : [])
+
+      const safeReviews = Array.isArray(reviewsData) ? reviewsData : []
+      const reviewerIds = [...new Set(safeReviews.map((review) => review.reviewer_user_id).filter(Boolean))]
+      if (reviewerIds.length) {
+        const labelEntries = await Promise.all(reviewerIds.map(async (reviewerId) => {
+          const userResponse = await fetch(`${API_BASE_URL}/users/${reviewerId}`, {
+            headers: getAuthHeaders(),
+          })
+          const userData = await userResponse.json().catch(() => ({}))
+          if (userResponse.ok) {
+            return [reviewerId, userData?.name || userData?.email || String(reviewerId)]
+          }
+
+          const authResponse = await fetch(`${API_BASE_URL}/auth/users/${reviewerId}`, {
+            headers: getAuthHeaders(),
+          })
+          const authData = await authResponse.json().catch(() => ({}))
+          if (authResponse.ok) {
+            return [reviewerId, authData?.email || String(reviewerId)]
+          }
+
+          return [reviewerId, String(reviewerId)]
+        }))
+        setReviewerLabels(Object.fromEntries(labelEntries))
+      } else {
+        setReviewerLabels({})
+      }
 
       const matchedCategory = Array.isArray(categoriesData)
         ? categoriesData.find((category) => category.id === productData.category_id)
         : null
       setCategoryName(matchedCategory?.name || 'Unknown category')
 
-      if (sellerResponse.ok) {
-        setSellerName(sellerData?.name || sellerData?.email || 'Unknown seller')
-      } else {
-        setSellerName('Unknown seller')
-      }
     } catch (err) {
       setError(err.message || 'Could not load product details')
     } finally {
@@ -217,7 +254,7 @@ export default function ProductDetailPage() {
               <li className="detail-review-item" key={review.id}>
                 <p><Stars rating={review.rating} /> ({review.rating}/5)</p>
                 <p>{review.comment || 'No comment provided.'}</p>
-                <p className="detail-muted">By: {review.reviewer_user_id}</p>
+                <p className="detail-muted">By: {reviewerLabels[review.reviewer_user_id] || review.reviewer_user_id}</p>
               </li>
             ))}
           </ul>

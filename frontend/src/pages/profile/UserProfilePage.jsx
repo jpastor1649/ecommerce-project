@@ -45,6 +45,8 @@ export default function UserProfilePage() {
   const [myListings, setMyListings] = useState([])
   const [myReviews, setMyReviews] = useState([])
   const [reviewsReceived, setReviewsReceived] = useState([])
+  const [productLabels, setProductLabels] = useState({})
+  const [reviewerLabels, setReviewerLabels] = useState({})
   const [profileForm, setProfileForm] = useState({ name: '', phone: '' })
   const [addressForm, setAddressForm] = useState(createEmptyAddress())
 
@@ -96,9 +98,57 @@ export default function UserProfilePage() {
         phone: userProfile.phone || '',
       })
       setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
-      setMyListings(Array.isArray(listings) ? listings : [])
-      setMyReviews(Array.isArray(authoredReviews) ? authoredReviews : [])
-      setReviewsReceived(Array.isArray(sellerReviews) ? sellerReviews : [])
+      const safeListings = Array.isArray(listings) ? listings : []
+      const safeMyReviews = Array.isArray(authoredReviews) ? authoredReviews : []
+      const safeSellerReviews = Array.isArray(sellerReviews) ? sellerReviews : []
+
+      setMyListings(safeListings)
+      setMyReviews(safeMyReviews)
+      setReviewsReceived(safeSellerReviews)
+
+      const listingLabelMap = Object.fromEntries(
+        safeListings.map((product) => [String(product.id), product.name || String(product.id)])
+      )
+      const reviewedProductIds = [
+        ...new Set(
+          [...safeMyReviews, ...safeSellerReviews].map((review) => String(review.product_id))
+        ),
+      ]
+      const missingProductIds = reviewedProductIds.filter((id) => !listingLabelMap[id])
+      const fetchedProductLabels = await Promise.all(missingProductIds.map(async (id) => {
+        const productResponse = await fetchJson(`${API_BASE_URL}/products/${id}`, {
+          headers: getAuthHeaders(),
+        })
+        return [id, productResponse?.name || id]
+      }).map((promise) => promise.catch(() => null)))
+
+      const productEntries = fetchedProductLabels.filter(Boolean)
+      setProductLabels({
+        ...listingLabelMap,
+        ...Object.fromEntries(productEntries),
+      })
+
+      const reviewerIds = [...new Set(safeSellerReviews.map((review) => String(review.reviewer_user_id)))]
+      const reviewerEntries = await Promise.all(reviewerIds.map(async (id) => {
+        const userResponse = await fetch(`${API_BASE_URL}/users/${id}`, {
+          headers: getAuthHeaders(),
+        })
+        const userData = await userResponse.json().catch(() => ({}))
+        if (userResponse.ok) {
+          return [id, userData?.name || userData?.email || id]
+        }
+
+        const authResponse = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+          headers: getAuthHeaders(),
+        })
+        const authData = await authResponse.json().catch(() => ({}))
+        if (authResponse.ok) {
+          return [id, authData?.email || id]
+        }
+
+        return [id, id]
+      }))
+      setReviewerLabels(Object.fromEntries(reviewerEntries))
     } catch (err) {
       if (err.status === 404) {
         setError('No user profile was found in user-service for this account yet.')
@@ -386,7 +436,7 @@ export default function UserProfilePage() {
                 <ul className="address-list">
                   {myReviews.map((review) => (
                     <li className="address-item" key={review.id}>
-                      <p>Product: {review.product_id}</p>
+                      <p>Product: {productLabels[String(review.product_id)] || review.product_id}</p>
                       <p>Rating: {'★'.repeat(review.rating)} ({review.rating}/5)</p>
                       <p>{review.comment || 'No comment provided.'}</p>
                     </li>
@@ -403,7 +453,8 @@ export default function UserProfilePage() {
                 <ul className="address-list">
                   {reviewsReceived.map((review) => (
                     <li className="address-item" key={review.id}>
-                      <p>From user: {review.reviewer_user_id}</p>
+                      <p>Product: {productLabels[String(review.product_id)] || review.product_id}</p>
+                      <p>From user: {reviewerLabels[String(review.reviewer_user_id)] || review.reviewer_user_id}</p>
                       <p>Rating: {'★'.repeat(review.rating)} ({review.rating}/5)</p>
                       <p>{review.comment || 'No comment provided.'}</p>
                     </li>

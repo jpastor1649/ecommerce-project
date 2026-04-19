@@ -2,6 +2,7 @@
 
 import hashlib
 from datetime import datetime, timezone
+from uuid import UUID
 
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
@@ -131,3 +132,15 @@ async def login_user(email: str, password: str, db: AsyncSession) -> TokenRespon
     token = create_access_token(str(user.id))
     await store_token_session(token, str(user.id))
     return TokenResponse(access_token=token)
+
+
+async def get_auth_user_by_id(user_id: UUID, db: AsyncSession) -> UserResponse:
+    """Return auth user by id for cross-service identity resolution."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Auth user not found",
+        )
+    return UserResponse.model_validate(user)
