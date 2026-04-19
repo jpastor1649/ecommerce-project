@@ -45,7 +45,7 @@ const RegisterPage = () => {
         if ([502, 503, 504].includes(response.status)) {
           setError('Services are warming up. Please try again in a few seconds.')
         } else {
-          setError(data.detail || 'Error registering user')
+          setError(typeof data.detail === 'string' ? data.detail : Array.isArray(data.detail) ? data.detail.map(e => e.msg).join(', ') : 'Error registering user')
         }
       }
     } catch (err) {
@@ -59,7 +59,7 @@ const RegisterPage = () => {
     <div className="register-container">
       <div className="register-card">
         <div className="auth-brand">
-          <img src={aicartLogo} alt="AICart logo" className="auth-brand-logo" />
+          <img src={aicartLogo.src} alt="AICart logo" className="auth-brand-logo" />
           <p className="auth-brand-name">AICart</p>
         </div>
 
