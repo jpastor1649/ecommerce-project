@@ -1,5 +1,6 @@
 """Authentication dependency for protected endpoints."""
 
+import hashlib
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -9,10 +10,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth_service.src.core.settings import settings
+from auth_service.src.core.redis_client import get_redis_client
 from auth_service.src.dependencies.get_db import get_db
 from auth_service.src.models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _session_key(token: str) -> str:
+    fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return f"{settings.auth_session_prefix}:{fingerprint}"
+
+
+def _blacklist_key(token: str) -> str:
+    fingerprint = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return f"{settings.auth_blacklist_prefix}:{fingerprint}"
 
 
 async def get_current_user(
@@ -27,6 +39,18 @@ async def get_current_user(
         )
 
     token = credentials.credentials
+
+    redis_client = get_redis_client()
+    if await redis_client.exists(_blacklist_key(token)):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token revoked",
+        )
+    if not await redis_client.exists(_session_key(token)):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired",
+        )
 
     try:
         payload = jwt.decode(

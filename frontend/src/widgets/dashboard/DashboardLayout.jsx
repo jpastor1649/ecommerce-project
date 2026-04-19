@@ -1,26 +1,12 @@
 import { useState } from 'react'
-import { Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import './App.css'
-import Login from './components/login'
-import Register from './components/Register'
-import ProductCatalog from './components/ProductCatalog'
-import UserProfilePage from './components/UserProfilePage'
-import aicartLogo from './assets/AICart.png'
-import heroImg from './assets/hero.png'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../../shared/config/api'
+import { clearAuthToken, getAuthToken } from '../../shared/lib/auth'
+import aicartLogo from '../../assets/AICart.png'
+import heroImg from '../../assets/hero.png'
+import './DashboardLayout.css'
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
-
-function ProtectedRoute({ children }) {
-  const token = sessionStorage.getItem('authToken')
-
-  if (!token) {
-    return <Navigate to="/" replace />
-  }
-
-  return children
-}
-
-function DashboardLayout() {
+export default function DashboardLayout() {
   const navigate = useNavigate()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -28,7 +14,7 @@ function DashboardLayout() {
     if (isLoggingOut) return
 
     setIsLoggingOut(true)
-    const token = sessionStorage.getItem('authToken')
+    const token = getAuthToken()
 
     try {
       if (token) {
@@ -40,9 +26,9 @@ function DashboardLayout() {
         })
       }
     } catch {
-      // Always continue with local logout even if API is unreachable.
+      // Continue local logout even if API is unavailable.
     } finally {
-      sessionStorage.removeItem('authToken')
+      clearAuthToken()
       navigate('/', { replace: true })
     }
   }
@@ -60,7 +46,13 @@ function DashboardLayout() {
             to="products"
             className={({ isActive }) => `dashboard-nav-link${isActive ? ' active' : ''}`}
           >
-            Products
+            Catalog
+          </NavLink>
+          <NavLink
+            to="my-products"
+            className={({ isActive }) => `dashboard-nav-link${isActive ? ' active' : ''}`}
+          >
+            My products
           </NavLink>
           <NavLink
             to="profile"
@@ -84,9 +76,7 @@ function DashboardLayout() {
         <div className="dashboard-hero-copy">
           <p className="dashboard-hero-kicker">Customer Area</p>
           <h1>Control your shopping experience</h1>
-          <p>
-            Switch between product discovery and your personal profile with one click.
-          </p>
+          <p>Navigate between catalog, seller area, and profile from one dashboard.</p>
         </div>
         <img src={heroImg} className="dashboard-hero-image" width="170" height="179" alt="" />
       </section>
@@ -97,26 +87,3 @@ function DashboardLayout() {
     </div>
   )
 }
-
-function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="products" replace />} />
-        <Route path="products" element={<ProductCatalog />} />
-        <Route path="profile" element={<UserProfilePage />} />
-      </Route>
-    </Routes>
-  )
-}
-
-export default App

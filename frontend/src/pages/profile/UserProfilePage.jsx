@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
-import './UserProfilePanel.css'
+import { API_BASE_URL } from '../../shared/config/api'
+import { getAuthHeaders } from '../../shared/lib/auth'
+import './UserProfilePage.css'
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+function formatPrice(price) {
+  const value = Number(price)
+  if (Number.isNaN(value)) return String(price)
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
 
 function createEmptyAddress() {
   return {
@@ -11,14 +21,6 @@ function createEmptyAddress() {
     country: '',
     postal_code: '',
     is_default: false,
-  }
-}
-
-function getAuthHeaders() {
-  const token = sessionStorage.getItem('authToken')
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
   }
 }
 
@@ -40,6 +42,11 @@ async function fetchJson(url, options = {}) {
 export default function UserProfilePage() {
   const [profile, setProfile] = useState(null)
   const [addresses, setAddresses] = useState([])
+  const [myListings, setMyListings] = useState([])
+  const [myReviews, setMyReviews] = useState([])
+  const [reviewsReceived, setReviewsReceived] = useState([])
+  const [productLabels, setProductLabels] = useState({})
+  const [reviewerLabels, setReviewerLabels] = useState({})
   const [profileForm, setProfileForm] = useState({ name: '', phone: '' })
   const [addressForm, setAddressForm] = useState(createEmptyAddress())
 
@@ -73,12 +80,75 @@ export default function UserProfilePage() {
         headers: getAuthHeaders(),
       })
 
+      const [authoredReviews, sellerReviews, listings] = await Promise.all([
+        fetchJson(`${API_BASE_URL}/products/mine/reviews`, {
+          headers: getAuthHeaders(),
+        }),
+        fetchJson(`${API_BASE_URL}/products/mine/reviews-received`, {
+          headers: getAuthHeaders(),
+        }),
+        fetchJson(`${API_BASE_URL}/products/mine/listings`, {
+          headers: getAuthHeaders(),
+        }),
+      ])
+
       setProfile(userProfile)
       setProfileForm({
         name: userProfile.name || '',
         phone: userProfile.phone || '',
       })
       setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
+      const safeListings = Array.isArray(listings) ? listings : []
+      const safeMyReviews = Array.isArray(authoredReviews) ? authoredReviews : []
+      const safeSellerReviews = Array.isArray(sellerReviews) ? sellerReviews : []
+
+      setMyListings(safeListings)
+      setMyReviews(safeMyReviews)
+      setReviewsReceived(safeSellerReviews)
+
+      const listingLabelMap = Object.fromEntries(
+        safeListings.map((product) => [String(product.id), product.name || String(product.id)])
+      )
+      const reviewedProductIds = [
+        ...new Set(
+          [...safeMyReviews, ...safeSellerReviews].map((review) => String(review.product_id))
+        ),
+      ]
+      const missingProductIds = reviewedProductIds.filter((id) => !listingLabelMap[id])
+      const fetchedProductLabels = await Promise.all(missingProductIds.map(async (id) => {
+        const productResponse = await fetchJson(`${API_BASE_URL}/products/${id}`, {
+          headers: getAuthHeaders(),
+        })
+        return [id, productResponse?.name || id]
+      }).map((promise) => promise.catch(() => null)))
+
+      const productEntries = fetchedProductLabels.filter(Boolean)
+      setProductLabels({
+        ...listingLabelMap,
+        ...Object.fromEntries(productEntries),
+      })
+
+      const reviewerIds = [...new Set(safeSellerReviews.map((review) => String(review.reviewer_user_id)))]
+      const reviewerEntries = await Promise.all(reviewerIds.map(async (id) => {
+        const userResponse = await fetch(`${API_BASE_URL}/users/${id}`, {
+          headers: getAuthHeaders(),
+        })
+        const userData = await userResponse.json().catch(() => ({}))
+        if (userResponse.ok) {
+          return [id, userData?.name || userData?.email || id]
+        }
+
+        const authResponse = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+          headers: getAuthHeaders(),
+        })
+        const authData = await authResponse.json().catch(() => ({}))
+        if (authResponse.ok) {
+          return [id, authData?.email || id]
+        }
+
+        return [id, id]
+      }))
+      setReviewerLabels(Object.fromEntries(reviewerEntries))
     } catch (err) {
       if (err.status === 404) {
         setError('No user profile was found in user-service for this account yet.')
@@ -337,6 +407,60 @@ export default function UserProfilePage() {
                   {addressSaving ? 'Saving address...' : 'Save address'}
                 </button>
               </form>
+            </article>
+          </div>
+
+          <div className="user-reviews-grid">
+            <article className="user-address-card">
+              <h3>My products for sale</h3>
+              {myListings.length === 0 ? (
+                <p className="user-panel-state">You do not have active listings yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {myListings.map((product) => (
+                    <li className="address-item" key={product.id}>
+                      <p>{product.name}</p>
+                      <p>Price: {formatPrice(product.price)}</p>
+                      <p>Stock: {product.stock}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+
+            <article className="user-address-card">
+              <h3>Reviews written by you</h3>
+              {myReviews.length === 0 ? (
+                <p className="user-panel-state">You have not reviewed products yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {myReviews.map((review) => (
+                    <li className="address-item" key={review.id}>
+                      <p>Product: {productLabels[String(review.product_id)] || review.product_id}</p>
+                      <p>Rating: {'★'.repeat(review.rating)} ({review.rating}/5)</p>
+                      <p>{review.comment || 'No comment provided.'}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+
+            <article className="user-address-card">
+              <h3>Reviews on your listings</h3>
+              {reviewsReceived.length === 0 ? (
+                <p className="user-panel-state">No reviews received on your products yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {reviewsReceived.map((review) => (
+                    <li className="address-item" key={review.id}>
+                      <p>Product: {productLabels[String(review.product_id)] || review.product_id}</p>
+                      <p>From user: {reviewerLabels[String(review.reviewer_user_id)] || review.reviewer_user_id}</p>
+                      <p>Rating: {'★'.repeat(review.rating)} ({review.rating}/5)</p>
+                      <p>{review.comment || 'No comment provided.'}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </article>
           </div>
         </div>

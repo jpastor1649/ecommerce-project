@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     rabbitmq_host: str = "rabbitmq"
     user_profile_queue_name: str = "user_profile_create_queue"
+    redis_url: str = "redis://redis:6379/0"
+    auth_session_prefix: str = "auth:session"
+    auth_blacklist_prefix: str = "auth:blacklist"
 
     class Config:
         """Pydantic settings source configuration."""

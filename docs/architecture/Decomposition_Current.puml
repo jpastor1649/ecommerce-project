@@ -1,0 +1,81 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+skinparam shadowing false
+left to right direction
+
+title Decomposition View - Current Implementation
+
+package "ecommerce-project" {
+  package "frontend" {
+    component "app\n(routes + shell)" as FEApp
+    component "pages\n(route screens)" as FEPages
+    component "widgets\n(composed UI)" as FEWidgets
+    component "shared\n(config + libs)" as FEShared
+
+    FEApp --> FEPages : route composition
+    FEPages --> FEWidgets : UI composition
+    FEWidgets --> FEShared : shared libs/config
+    FEPages --> FEShared : API client + auth helpers
+  }
+
+  package "backend" {
+    package "auth-service" {
+      component "routers" as AuthRouters
+      component "services" as AuthServices
+      component "models/schemas" as AuthDomain
+      component "core" as AuthCore
+
+      AuthRouters --> AuthServices
+      AuthServices --> AuthDomain
+      AuthServices --> AuthCore
+    }
+
+    package "user-service" {
+      component "routers" as UserRouters
+      component "services" as UserServices
+      component "models/schemas" as UserDomain
+      component "core/events" as UserCore
+
+      UserRouters --> UserServices
+      UserServices --> UserDomain
+      UserServices --> UserCore
+    }
+
+    package "product-service" {
+      component "routers" as ProductRouters
+      component "services" as ProductServices
+      component "models/schemas" as ProductDomain
+      component "core" as ProductCore
+
+      ProductRouters --> ProductServices
+      ProductServices --> ProductDomain
+      ProductServices --> ProductCore
+    }
+  }
+
+  package "platform connectors" {
+    component "api-gateway\n(Nginx)" as Gateway
+    database "PostgreSQL" as Pg
+    database "Redis" as Redis
+    queue "RabbitMQ" as MQ
+  }
+}
+
+FEApp --> Gateway : REST
+Gateway --> AuthRouters : /auth/*
+Gateway --> UserRouters : /users/*, /internal/*
+Gateway --> ProductRouters : /products/*
+
+AuthCore --> Pg : auth DB
+AuthCore --> Redis : sessions/blacklist
+AuthCore --> MQ : publish events
+
+UserCore --> Pg : user DB
+UserCore --> MQ : consume events
+
+ProductCore --> Pg : product DB
+ProductCore --> Redis : auth/cache
+ProductServices --> UserServices : seller lookup (HTTP)
+
+@enduml

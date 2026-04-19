@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import './ProductCatalog.css'
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+import { useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../../shared/config/api'
+import { getAuthHeaders } from '../../shared/lib/auth'
+import './ProductCatalogPage.css'
 
 function formatPrice(price) {
   const value = Number(price)
@@ -13,7 +14,8 @@ function formatPrice(price) {
   }).format(value)
 }
 
-export default function ProductCatalog() {
+export default function ProductCatalogPage() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -22,14 +24,6 @@ export default function ProductCatalog() {
   const [error, setError] = useState('')
 
   const hasProducts = useMemo(() => products.length > 0, [products])
-
-  const getAuthHeaders = () => {
-    const token = sessionStorage.getItem('authToken')
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    }
-  }
 
   const fetchCategories = async () => {
     const response = await fetch(`${API_BASE_URL}/products/categories`, {
@@ -124,10 +118,15 @@ export default function ProductCatalog() {
     }
   }
 
+  const openProductDetail = (productId) => {
+    navigate(`/dashboard/products/${productId}`)
+  }
+
   return (
     <section className="catalog-section">
       <div className="catalog-header">
         <h2>Product Catalog</h2>
+        <p className="catalog-subtitle">Discover products and open each listing in detail.</p>
       </div>
 
       <div className="catalog-controls">
@@ -166,7 +165,19 @@ export default function ProductCatalog() {
       {!loading && !error && hasProducts && (
         <div className="products-grid">
           {products.map((product) => (
-            <article className="product-card" key={product.id}>
+            <article
+              className="product-card clickable"
+              key={product.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openProductDetail(product.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  openProductDetail(product.id)
+                }
+              }}
+            >
               <h3>{product.name}</h3>
               <p className="product-description">
                 {product.description || 'Product without description'}
@@ -177,6 +188,16 @@ export default function ProductCatalog() {
                   {product.stock > 0 ? `Stock: ${product.stock}` : 'Out of stock'}
                 </span>
               </div>
+              <button
+                type="button"
+                className="detail-button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  openProductDetail(product.id)
+                }}
+              >
+                View details
+              </button>
             </article>
           ))}
         </div>

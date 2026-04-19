@@ -48,8 +48,20 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 10s
-      retries: 10
-      start_period: 40s
+      retries: 20
+      start_period: 90s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   auth-service:
     build:
@@ -61,6 +73,8 @@ services:
       auth-postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_started
+      redis:
         condition: service_healthy
     environment:
       DATABASE_URL: ${AUTH_DATABASE_URL}
@@ -71,7 +85,14 @@ services:
       JWT_EXPIRE_MINUTES: ${AUTH_JWT_EXPIRE_MINUTES:-60}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     command: uvicorn auth_service.src.main:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     ports:
       - "${AUTH_SERVICE_EXTERNAL_PORT:-8001}:8001"
 
@@ -84,12 +105,20 @@ services:
     depends_on:
       user-postgres:
         condition: service_healthy
-      rabbitmq:
+      redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       DATABASE_URL: ${USER_DATABASE_URL}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     ports:
       - "${USER_SERVICE_EXTERNAL_PORT:-8002}:8000"
 
@@ -102,13 +131,23 @@ services:
     depends_on:
       user-postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://user_user:user_password@user-postgres:5432/user_db}
       APP_NAME: ${PRODUCT_APP_NAME:-Product Service}
       DEBUG: ${PRODUCT_DEBUG:-false}
       JWT_SECRET: ${AUTH_JWT_SECRET}
       JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL:-http://user-service:8000}
     command: uvicorn product_service.main:app --host 0.0.0.0 --port 8003
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     ports:
       - "${PRODUCT_SERVICE_EXTERNAL_PORT:-8003}:8003"
 
@@ -118,11 +157,11 @@ services:
     restart: unless-stopped
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
       user-service:
-        condition: service_started
+        condition: service_healthy
       product-service:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${API_GATEWAY_EXTERNAL_PORT:-8000}:8000"
     volumes:

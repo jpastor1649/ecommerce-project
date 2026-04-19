@@ -11,9 +11,30 @@ from product_service.core.dependencies.get_current_user import (
     get_current_user,
 )
 from product_service.services.product_service import ProductService
-from product_service.schemas.product import CategoryResponse, ProductResponse
+from product_service.schemas.product import (
+    CategoryCreate,
+    CategoryResponse,
+    CategoryUpdate,
+    ProductCreate,
+    ProductImageCreate,
+    ProductImageReorderRequest,
+    ProductImageResponse,
+    ProductImageUpdate,
+    ProductResponse,
+    ProductReviewCreate,
+    ProductReviewResponse,
+    ProductUpdate,
+)
 
 router = APIRouter(prefix="/products", tags=["products"])
+
+
+def _ensure_category_editor(current_user: AuthenticatedUser) -> None:
+    # Backward compatible: older JWTs may not include role claim yet.
+    if current_user.role is None:
+        return
+    if current_user.role.lower() not in {"admin", "seller"}:
+        raise HTTPException(status_code=403, detail="No tienes permisos para gestionar categorias")
 
 
 @router.get("/", response_model=list[ProductResponse])
@@ -35,6 +56,43 @@ async def get_categories(
     """Return all active categories."""
     service = ProductService(db)
     return await service.get_all_categories()
+
+
+@router.post("/categories", response_model=CategoryResponse, status_code=201)
+async def create_category(
+    payload: CategoryCreate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a category (admin/seller only)."""
+    _ensure_category_editor(current_user)
+    service = ProductService(db)
+    return await service.create_category(payload)
+
+
+@router.patch("/categories/{category_id}", response_model=CategoryResponse)
+async def update_category(
+    category_id: UUID,
+    payload: CategoryUpdate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a category (admin/seller only)."""
+    _ensure_category_editor(current_user)
+    service = ProductService(db)
+    return await service.update_category(category_id, payload)
+
+
+@router.delete("/categories/{category_id}", status_code=204)
+async def delete_category(
+    category_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete a category (admin/seller only)."""
+    _ensure_category_editor(current_user)
+    service = ProductService(db)
+    await service.deactivate_category(category_id)
 
 
 @router.get("/search", response_model=list[ProductResponse])
@@ -70,6 +128,70 @@ async def search_products(
     return await service.search_products(q, category_slug)
 
 
+@router.post("/", response_model=ProductResponse, status_code=201)
+async def create_product(
+    payload: ProductCreate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a product listing owned by the authenticated seller."""
+    service = ProductService(db)
+    return await service.create_product(current_user.user_id, payload)
+
+
+@router.get("/mine/listings", response_model=list[ProductResponse])
+async def get_my_listings(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get listings published by the authenticated seller."""
+    service = ProductService(db)
+    return await service.get_my_products(current_user.user_id)
+
+
+@router.patch("/{product_id}", response_model=ProductResponse)
+async def update_product(
+    product_id: UUID,
+    payload: ProductUpdate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update authenticated seller listing."""
+    service = ProductService(db)
+    return await service.update_product(product_id, current_user.user_id, payload)
+
+
+@router.delete("/{product_id}", status_code=204)
+async def delete_product(
+    product_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete authenticated seller listing."""
+    service = ProductService(db)
+    await service.deactivate_product(product_id, current_user.user_id)
+
+
+@router.get("/mine/reviews", response_model=list[ProductReviewResponse])
+async def get_my_reviews(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List reviews authored by current user for profile section."""
+    service = ProductService(db)
+    return await service.get_reviews_by_user(current_user.user_id)
+
+
+@router.get("/mine/reviews-received", response_model=list[ProductReviewResponse])
+async def get_reviews_received(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List reviews received on current seller listings for profile section."""
+    service = ProductService(db)
+    return await service.get_reviews_about_seller(current_user.user_id)
+
+
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: UUID,
@@ -82,3 +204,98 @@ async def get_product(
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return product
+
+
+@router.post("/{product_id}/reviews", response_model=ProductReviewResponse, status_code=201)
+async def create_product_review(
+    product_id: UUID,
+    payload: ProductReviewCreate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create (or update) authenticated user review for a product."""
+    service = ProductService(db)
+    return await service.create_review(product_id, current_user.user_id, payload)
+
+
+@router.post("/{product_id}/images", response_model=ProductImageResponse, status_code=201)
+async def add_product_image(
+    product_id: UUID,
+    payload: ProductImageCreate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Attach an image to an owned listing."""
+    service = ProductService(db)
+    return await service.add_product_image(product_id, current_user.user_id, payload)
+
+
+@router.get("/{product_id}/images", response_model=list[ProductImageResponse])
+async def get_product_images(
+    product_id: UUID,
+    _: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List gallery images for a product."""
+    service = ProductService(db)
+    return await service.get_product_images(product_id)
+
+
+@router.patch("/{product_id}/images/{image_id}", response_model=ProductImageResponse)
+async def update_product_image(
+    product_id: UUID,
+    image_id: UUID,
+    payload: ProductImageUpdate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update image metadata for owned listing."""
+    service = ProductService(db)
+    return await service.update_product_image(product_id, image_id, current_user.user_id, payload)
+
+
+@router.delete("/{product_id}/images/{image_id}", status_code=204)
+async def delete_product_image(
+    product_id: UUID,
+    image_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete image from owned listing."""
+    service = ProductService(db)
+    await service.deactivate_product_image(product_id, image_id, current_user.user_id)
+
+
+@router.post("/{product_id}/images/reorder", response_model=list[ProductImageResponse])
+async def reorder_product_images(
+    product_id: UUID,
+    payload: ProductImageReorderRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reorder image positions for owned listing."""
+    service = ProductService(db)
+    return await service.reorder_product_images(product_id, current_user.user_id, payload)
+
+
+@router.post("/{product_id}/images/{image_id}/set-cover", response_model=list[ProductImageResponse])
+async def set_cover_image(
+    product_id: UUID,
+    image_id: UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set one image as cover (position 0) for owned listing."""
+    service = ProductService(db)
+    return await service.set_cover_image(product_id, image_id, current_user.user_id)
+
+
+@router.get("/{product_id}/reviews", response_model=list[ProductReviewResponse])
+async def get_product_reviews(
+    product_id: UUID,
+    _: AuthenticatedUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List active reviews for a product."""
+    service = ProductService(db)
+    return await service.get_product_reviews(product_id)

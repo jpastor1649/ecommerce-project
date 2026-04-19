@@ -4,12 +4,16 @@ This module provides functions to populate the database with sample data
 on application startup. Seeds are idempotent (safe to run multiple times).
 """
 
+import uuid
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from product_service.models.product import Category, Product
+
+
+SEED_SELLER_USER_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 
 async def seed_initial_data(db: AsyncSession) -> None:
@@ -88,6 +92,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
     products = [
         # Electronics
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["electronics"].id,
             name="Wireless Bluetooth Headphones",
             slug="wireless-bluetooth-headphones",
@@ -100,6 +105,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["electronics"].id,
             name="USB-C Fast Charging Cable",
             slug="usb-c-fast-charging-cable",
@@ -112,6 +118,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["electronics"].id,
             name="Portable Power Bank 20000mAh",
             slug="portable-power-bank-20000mah",
@@ -124,6 +131,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["electronics"].id,
             name="Smartwatch Series S5",
             slug="smartwatch-series-s5",
@@ -136,6 +144,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["electronics"].id,
             name="Mechanical Gaming Keyboard",
             slug="mechanical-gaming-keyboard",
@@ -149,6 +158,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
         ),
         # Clothing
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["clothing"].id,
             name="100% Cotton Premium T-Shirt",
             slug="cotton-premium-tshirt",
@@ -159,6 +169,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["clothing"].id,
             name="Classic Blue Denim Jeans",
             slug="classic-blue-denim-jeans",
@@ -171,6 +182,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["clothing"].id,
             name="Casual Sports Running Shoes",
             slug="casual-sports-running-shoes",
@@ -181,6 +193,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["clothing"].id,
             name="Unisex Hoodie Fleece",
             slug="unisex-hoodie-fleece",
@@ -193,6 +206,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["clothing"].id,
             name="Lightweight Bomber Jacket",
             slug="lightweight-bomber-jacket",
@@ -206,6 +220,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
         ),
         # Home & Garden
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["home-garden"].id,
             name="Adjustable Aluminum Phone Stand",
             slug="adjustable-aluminum-phone-stand",
@@ -216,6 +231,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["home-garden"].id,
             name="LED Desk Lamp with USB Charging",
             slug="led-desk-lamp-usb-charging",
@@ -228,6 +244,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["home-garden"].id,
             name="Wooden Desk Organizer Set",
             slug="wooden-desk-organizer-set",
@@ -240,6 +257,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["home-garden"].id,
             name="Memory Foam Pillow",
             slug="memory-foam-pillow",
@@ -252,6 +270,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["home-garden"].id,
             name="Ceramic Plant Pot Set",
             slug="ceramic-plant-pot-set",
@@ -265,6 +284,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
         ),
         # Sports & Outdoors
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["sports-outdoors"].id,
             name="Yoga Mat Pro 6mm",
             slug="yoga-mat-pro-6mm",
@@ -277,6 +297,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["sports-outdoors"].id,
             name="Insulated Stainless Water Bottle 1L",
             slug="insulated-stainless-water-bottle-1l",
@@ -289,6 +310,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["sports-outdoors"].id,
             name="Resistance Bands Kit",
             slug="resistance-bands-kit",
@@ -301,6 +323,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["sports-outdoors"].id,
             name="Compact Camping Lantern",
             slug="compact-camping-lantern",
@@ -313,6 +336,7 @@ async def seed_initial_data(db: AsyncSession) -> None:
             is_active=True,
         ),
         Product(
+            seller_user_id=SEED_SELLER_USER_ID,
             category_id=categories["sports-outdoors"].id,
             name="Trail Running Backpack 12L",
             slug="trail-running-backpack-12l",

@@ -20,9 +20,12 @@
 
 - [Características Principales](#-características-principales)
 - [Arquitectura](#-arquitectura)
+- [Diagramas](#-diagramas)
+- [Vistas Arquitectónicas](#-vistas-arquitectónicas)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Inicio Rápido](#-inicio-rápido)
 - [Instalación Local](#-instalación-local)
+- [Estado de Implementación](#-estado-de-implementación)
 - [Requerimientos](#-requerimientos)
 - [Contribución](#-contribución)
 - [Equipo](#-equipo)
@@ -45,11 +48,12 @@
 - **Búsqueda semántica**: búsqueda vectorial con `pgvector` y embeddings (`text-embedding-004`)
 - **Moderación automática**: revisión de reseñas con LLM — sin entrenamiento propio de modelos
 
-### 🏗️ Arquitectura Distribuida (Clean Architecture)
-- **`core-service`** (Python / FastAPI): autenticación, catálogo, carrito, órdenes, pagos, reseñas
-- **`ai-service`** (Python / FastAPI): chatbot Gemini, recomendaciones, búsqueda semántica, moderación
-- **`frontend`** (TypeScript / Next.js 14): BFF + UI — renderizado en servidor, sin exposición de URLs internas
-- Dos bases de datos: PostgreSQL 15 + pgvector (relacional) y Redis Cloud (NoSQL clave-valor)
+### 🏗️ Arquitectura Distribuida (Layered Architecture)
+- **`auth-service`** (Python / FastAPI): registro, login, JWT, sesión/blacklist en Redis
+- **`user-service`** (Python / FastAPI): perfiles y direcciones de usuario
+- **`product-service`** (Python / FastAPI): catálogo, publicaciones, reseñas, galería de imágenes
+- **`frontend`** (React + Vite): UI cliente por capas (`app`, `pages`, `widgets`, `shared`)
+- Infraestructura: PostgreSQL por servicio + Redis (NoSQL) + RabbitMQ (eventos)
 
 ### 🔄 CI/CD Pipeline (GitHub Actions)
 - ✅ **lint.yml**: Validación de código (Black, isort, Flake8 / ESLint)
@@ -63,32 +67,130 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │              CAPA DE PRESENTACIÓN                                │
-│  Next.js 14 App Router (BFF) — TypeScript                      │
-│  Catálogo · Carrito · Checkout · Órdenes · Chatbot IA          │
+│  Frontend React + Vite                                          │
+│  Catálogo · Publicaciones · Perfil · Reseñas                    │
 └──────────────────────────┬──────────────────────────────────────┘
                            │ ① REST JSON/HTTPS
-          ┌────────────────┴───────────────┐
-          ▼                                ▼
-┌─────────────────┐              ┌──────────────────┐
-│  core-service   │──② httpx ──▶│   ai-service     │
-│  Python / FastAPI│              │  Python / FastAPI │
-│  Auth · Productos│              │  Gemini · Recomen.│
-│  Órdenes · Pagos │              │  Búsq. Semántica  │
-└────────┬────────┘              └────────┬─────────┘
-         │                                │
-    ┌────┴────────────────────────────────┘
-    ▼                  ▼
-┌──────────────┐  ┌──────────────┐
-│ PostgreSQL 15 │  │ Redis Cloud  │
-│ + pgvector   │  │ (NoSQL cache)│
-└──────────────┘  └──────────────┘
+      ┌────────────────┬────────────────┬────────────────┐
+      ▼                ▼                ▼                
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  auth-service   │ │  user-service   │ │ product-service │
+│  Python/FastAPI │ │  Python/FastAPI │ │  Python/FastAPI │
+└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+     │                   │                   │
+  ┌────┴─────┐        ┌────┴─────┐        ┌────┴─────┐
+  ▼          ▼        ▼          ▼        ▼          ▼
+┌──────────┐ ┌──────┐ ┌──────────┐ ┌──────┐ ┌──────────┐ ┌──────┐
+│ Auth DB  │ │Redis │ │ User DB  │ │Rabbit│ │Product DB│ │Redis │
+└──────────┘ └──────┘ └──────────┘ └──────┘ └──────────┘ └──────┘
 ```
 
 **Estilos arquitectónicos:**
-- **Microservicios** — `core-service` y `ai-service` son desplegables independientes
-- **Clean Architecture** — cada servicio sigue el modelo cebolla (Dominio → Aplicación → Infraestructura → Presentación)
-- **BFF (Backend for Frontend)** — Next.js agrega respuestas de ambos servicios antes de renderizar
-- **Patrones**: Repository, Dependency Injection, Strategy, Observer (Event Bus)
+- **Microservicios** — `auth-service`, `user-service`, `product-service` son desplegables independientes
+- **Layered Architecture** — cada servicio organiza código por capas: `presentation` (routers), `application` (services), `domain` (models/schemas), `infrastructure` (database/redis/events)
+- **API Gateway** — Nginx centraliza entrada y ruteo por dominio
+- **Patrones**: Service Layer, Dependency Injection, Observer/Event-Driven
+
+---
+
+## 📊 Estado de Implementación (Actual)
+
+> Esta sección describe el estado real implementado hoy en el repositorio.
+> La visión ideal del proyecto se mantiene en las secciones anteriores.
+
+### ✅ Implementado
+
+- Autenticación con `auth-service`: registro, login, validación de token y logout.
+- Gestión de sesiones y blacklist de tokens con Redis en autenticación.
+- `user-service` para perfil de usuario y consumo por otros servicios.
+- `product-service` con catálogo, CRUD de productos, categorías, reseñas y galería de imágenes.
+- Enriquecimiento de respuesta de productos (categoría y seller) con caché en Redis.
+- Frontend React + Vite organizado por capas (`app`, `pages`, `widgets`, `shared`).
+- Orquestación por Docker Compose con servicios backend, bases de datos, Redis y RabbitMQ.
+- API Gateway (Nginx) para entrada unificada.
+
+### 🟡 Parcial
+
+- Validación de roles en todos los endpoints sensibles depende de claims consistentes en JWT.
+- Cobertura de pruebas automatizadas integral (e2e entre servicios) aún en consolidación.
+
+### ⏳ No implementado (respecto al ideal planteado)
+
+- Carrito de compras y checkout/pasarela de pagos.
+- Historial de compras y personalización basada en órdenes.
+- Recomendaciones con IA generativa en producción.
+- Asistente conversacional IA integrado en frontend/backend.
+
+---
+
+## 📐 Diagramas
+
+Diagramas actualizados basados en la implementación existente:
+
+- Componentes y Conectores (estado actual): [docs/architecture/Component_Connectors_Current.puml](docs/architecture/Component_Connectors_Current.puml)
+- Despliegue (estado actual): [docs/architecture/Deployment_Current.puml](docs/architecture/Deployment_Current.puml)
+- Presentación/Frontend (estado actual): [docs/architecture/Presentation_Current.puml](docs/architecture/Presentation_Current.puml)
+- Decomposición (estado actual): [docs/architecture/Decomposition_Current.puml](docs/architecture/Decomposition_Current.puml)
+- Organización por capas (guía): [docs/architecture/Layered_Organization_Guide.md](docs/architecture/Layered_Organization_Guide.md)
+- Vigencia de diagramas (actual/futuro/no vigente): [docs/architecture/Diagram_Status.md](docs/architecture/Diagram_Status.md)
+
+Diagramas de referencia previos y objetivo:
+
+- Objetivo Marketplace: [docs/architecture/Component_Marketplace_Target.puml](docs/architecture/Component_Marketplace_Target.puml)
+- C4 y artefactos previos: [docs/architecture/](docs/architecture/)
+- Workspace de arquitectura futura: [docs/future/README.md](docs/future/README.md)
+- Roadmap futuro por fases: [docs/future/roadmap/Future_Roadmap.md](docs/future/roadmap/Future_Roadmap.md)
+- Definicion de objetivo futuro: [docs/future/architecture/Future_System_Target.md](docs/future/architecture/Future_System_Target.md)
+
+---
+
+## 🧭 Vistas Arquitectónicas
+
+### Component-and Connector (C&C) Structure
+
+#### C&C View
+
+- Description of architectural elements and relations:
+  Frontend, API Gateway y microservicios de auth, user y product conectados por APIs REST; persistencia por servicio (PostgreSQL), Redis para sesión/caché y RabbitMQ para integración por eventos.
+- Description of architectural styles and patterns used:
+  Arquitectura de microservicios con API Gateway, estilo event-driven para comunicación asíncrona y patrones Service Layer + Dependency Injection.
+- Artifact:
+  [docs/architecture/Component_Connectors_Current.puml](docs/architecture/Component_Connectors_Current.puml)
+
+### Deployment Structure
+
+#### Deployment View
+
+- Description of architectural elements and relations:
+  Contenedores Docker para frontend, gateway Nginx, auth-service, user-service, product-service, PostgreSQL por dominio, Redis y RabbitMQ; exposición de puertos y dependencias coordinadas por Docker Compose.
+- Description of architectural patterns used:
+  Container-based deployment, base de datos por servicio y patrón edge gateway para entrada unificada.
+- Artifact:
+  [docs/architecture/Deployment_Current.puml](docs/architecture/Deployment_Current.puml)
+
+### Layered Structure
+
+#### Layered View
+
+- Description of architectural elements and relations:
+  En backend: presentation (routers) delega a application (services), que usa domain (models/schemas) e infrastructure (database, redis, events). En frontend: app coordina pages, pages componen widgets y widgets consumen shared.
+- Description of architectural patterns used:
+  Layered Architecture con separación de responsabilidades, flujo de dependencias de afuera hacia adentro y contratos explícitos entre capas.
+- Artifacts:
+  [docs/architecture/Presentation_Current.puml](docs/architecture/Presentation_Current.puml)
+  [docs/architecture/Layered_Organization_Guide.md](docs/architecture/Layered_Organization_Guide.md)
+
+### Decomposition Structure
+
+#### Decomposition View
+
+- Description of architectural elements and relations:
+  Descomposición por dominios y capacidades: auth-service (identidad y sesión), user-service (perfil), product-service (catálogo/reseñas/imágenes/categorías), frontend por módulos de interfaz y docs por artefactos arquitectónicos.
+- Description of architectural patterns used:
+  A nivel interno, cada servicio se divide en módulos de router, service, model y schema, con core para infraestructura compartida; a nivel de solución, los módulos interactúan mediante gateway, eventos y acceso controlado a datos.
+- Artifacts:
+  [docs/architecture/Decomposition_Current.puml](docs/architecture/Decomposition_Current.puml)
+  [docs/architecture/](docs/architecture/)
 
 ---
 
@@ -110,23 +212,26 @@ ecommerce-project/
 │       └── docker.yml
 │
 ├── backend/
-│   ├── Dockerfile
-│   ├── .dockerignore
-│   ├── pyproject.toml
-│   ├── src/
-│   │   ├── main.py
-│   │   ├── core/
-│   │   │   ├── config/
-│   │   │   ├── dependencies/
-│   │   │   ├── database.py
-│   │   │   └── seeds.py
-│   │   ├── domain/
-│   │   │   └── value_objects/
-│   │   ├── models/
-│   │   ├── routers/
-│   │   ├── schemas/
-│   │   └── services/
-│   └── tests/
+│   ├── auth_service/
+│   │   └── src/
+│   │       ├── routers/        # presentation
+│   │       ├── services/       # application
+│   │       ├── models/         # domain
+│   │       ├── schemas/        # domain contracts
+│   │       └── core/           # infrastructure/config
+│   ├── user-service/
+│   │   └── src/
+│   │       ├── routers/
+│   │       ├── services/
+│   │       ├── models/
+│   │       ├── schemas/
+│   │       └── core/
+│   └── product_service/
+│       ├── routers/
+│       ├── services/
+│       ├── models/
+│       ├── schemas/
+│       └── core/
 │
 ├── frontend/
 │   ├── Dockerfile
@@ -135,10 +240,12 @@ ecommerce-project/
 │   ├── vite.config.js
 │   ├── public/
 │   └── src/
-│       ├── App.jsx
-│       ├── main.jsx
+│       ├── app/                # root routes + shell composition
+│       ├── pages/              # route-level screens
+│       ├── widgets/            # reusable composed UI blocks
+│       ├── shared/             # config, libs, helpers
 │       ├── assets/
-│       └── components/
+│       └── main.jsx
 │
 └── docs/
   ├── entrega1.md
@@ -634,10 +741,9 @@ Si falla:
 | # | Nombre Completo |
 |---|---|
 | 1 | Sara Isabel Ospina Valderrama |
-| 2 | Juan David Ruiz Guasca |
-| 3 | Juan David Castañeda Cárdenas |
-| 4 | John Alejandro Pastor Sandoval |
-| 5 | Andrés Felipe Perdomo Uruburu |
+| 2 | Juan David Castañeda Cárdenas |
+| 3 | John Alejandro Pastor Sandoval |
+| 4 | Andrés Felipe Perdomo Uruburu |
 
 ---
 

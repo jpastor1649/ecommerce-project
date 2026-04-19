@@ -171,6 +171,13 @@
   grid-column: 1 / -1;
 }
 
+.user-reviews-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+  grid-column: 1 / -1;
+}
+
 .user-address-card {
   padding: 16px;
 }
@@ -281,6 +288,10 @@
   }
 
   .user-address-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-reviews-grid {
     grid-template-columns: 1fr;
   }
 }
