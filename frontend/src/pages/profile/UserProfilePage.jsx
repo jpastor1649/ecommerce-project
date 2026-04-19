@@ -51,6 +51,7 @@ export default function UserProfilePage() {
   const [addressForm, setAddressForm] = useState(createEmptyAddress())
 
   const [loading, setLoading] = useState(false)
+  const [productSectionLoading, setProductSectionLoading] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
   const [addressSaving, setAddressSaving] = useState(false)
 
@@ -61,34 +62,16 @@ export default function UserProfilePage() {
   const [addressError, setAddressError] = useState('')
   const [addressSuccess, setAddressSuccess] = useState('')
 
-  const loadUserData = async () => {
-    setLoading(true)
-    setError('')
+  const loadProductData = async () => {
+    setProductSectionLoading(true)
     setProductDataWarning('')
+    setMyListings([])
+    setMyReviews([])
+    setReviewsReceived([])
+    setProductLabels({})
+    setReviewerLabels({})
 
     try {
-      const authUser = await fetchJson(`${API_BASE_URL}/auth/me`, {
-        headers: getAuthHeaders(),
-      })
-
-      const userProfile = await fetchJson(
-        `${API_BASE_URL}/users/by-email?email=${encodeURIComponent(authUser.email)}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      )
-
-      const userAddresses = await fetchJson(`${API_BASE_URL}/users/${userProfile.id}/addresses`, {
-        headers: getAuthHeaders(),
-      })
-
-      setProfile(userProfile)
-      setProfileForm({
-        name: userProfile.name || '',
-        phone: userProfile.phone || '',
-      })
-      setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
-
       const productCalls = await Promise.allSettled([
         fetchJson(`${API_BASE_URL}/products/mine/reviews`, {
           headers: getAuthHeaders(),
@@ -152,25 +135,64 @@ export default function UserProfilePage() {
 
       const reviewerIds = [...new Set(safeSellerReviews.map((review) => String(review.reviewer_user_id)))]
       const reviewerEntries = await Promise.all(reviewerIds.map(async (id) => {
-        const userResponse = await fetch(`${API_BASE_URL}/users/${id}`, {
-          headers: getAuthHeaders(),
-        })
-        const userData = await userResponse.json().catch(() => ({}))
-        if (userResponse.ok) {
-          return [id, userData?.name || userData?.email || id]
-        }
+        try {
+          const userResponse = await fetch(`${API_BASE_URL}/users/${id}`, {
+            headers: getAuthHeaders(),
+          })
+          const userData = await userResponse.json().catch(() => ({}))
+          if (userResponse.ok) {
+            return [id, userData?.name || userData?.email || id]
+          }
 
-        const authResponse = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
-          headers: getAuthHeaders(),
-        })
-        const authData = await authResponse.json().catch(() => ({}))
-        if (authResponse.ok) {
-          return [id, authData?.email || id]
-        }
+          const authResponse = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+            headers: getAuthHeaders(),
+          })
+          const authData = await authResponse.json().catch(() => ({}))
+          if (authResponse.ok) {
+            return [id, authData?.email || id]
+          }
 
-        return [id, id]
+          return [id, id]
+        } catch {
+          return [id, id]
+        }
       }))
       setReviewerLabels(Object.fromEntries(reviewerEntries))
+    } catch {
+      setProductDataWarning('Product information is temporarily unavailable.')
+    } finally {
+      setProductSectionLoading(false)
+    }
+  }
+
+  const loadUserData = async () => {
+    setLoading(true)
+    setError('')
+    setProductDataWarning('')
+
+    try {
+      const authUser = await fetchJson(`${API_BASE_URL}/auth/me`, {
+        headers: getAuthHeaders(),
+      })
+
+      const userProfile = await fetchJson(
+        `${API_BASE_URL}/users/by-email?email=${encodeURIComponent(authUser.email)}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      )
+
+      const userAddresses = await fetchJson(`${API_BASE_URL}/users/${userProfile.id}/addresses`, {
+        headers: getAuthHeaders(),
+      })
+
+      setProfile(userProfile)
+      setProfileForm({
+        name: userProfile.name || '',
+        phone: userProfile.phone || '',
+      })
+      setAddresses(Array.isArray(userAddresses) ? userAddresses : [])
+      void loadProductData()
     } catch (err) {
       if (err.status === 404) {
         setError('No user profile was found in user-service for this account yet.')
@@ -281,9 +303,9 @@ export default function UserProfilePage() {
           className="user-refresh-button"
           type="button"
           onClick={loadUserData}
-          disabled={loading || profileSaving || addressSaving}
+          disabled={loading || productSectionLoading || profileSaving || addressSaving}
         >
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading || productSectionLoading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
@@ -433,6 +455,7 @@ export default function UserProfilePage() {
           </div>
 
           <div className="user-reviews-grid">
+            {productSectionLoading && <p className="user-panel-state">Loading product activity...</p>}
             {productDataWarning && <p className="user-panel-warning">{productDataWarning}</p>}
 
             <article className="user-address-card">

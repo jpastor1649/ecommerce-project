@@ -153,6 +153,14 @@
   color: #b42318;
 }
 
+.seller-warning {
+  color: #854d0e;
+  background: #fef3c7;
+  border: 1px solid #facc15;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
 .seller-success {
   color: #166534;
 }

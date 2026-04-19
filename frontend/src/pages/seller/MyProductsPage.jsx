@@ -19,6 +19,7 @@ export default function MyProductsPage() {
   const [loading, setLoading] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
+  const [dataWarning, setDataWarning] = useState('')
   const [publishError, setPublishError] = useState('')
   const [publishSuccess, setPublishSuccess] = useState('')
   const [imageError, setImageError] = useState('')
@@ -41,7 +42,7 @@ export default function MyProductsPage() {
       headers: getAuthHeaders(),
     })
     if (!response.ok) throw new Error('Could not load categories')
-    setCategories(await response.json())
+    return await response.json()
   }
 
   const fetchMyListings = async () => {
@@ -49,15 +50,42 @@ export default function MyProductsPage() {
       headers: getAuthHeaders(),
     })
     if (!response.ok) throw new Error('Could not load your listings')
-    const data = await response.json()
-    setMyListings(Array.isArray(data) ? data : [])
+    return await response.json()
   }
 
   const loadData = async () => {
     setLoading(true)
     setError('')
+    setDataWarning('')
     try {
-      await Promise.all([fetchCategories(), fetchMyListings()])
+      const [categoriesResult, listingsResult] = await Promise.allSettled([
+        fetchCategories(),
+        fetchMyListings(),
+      ])
+
+      const categoriesFailed = categoriesResult.status === 'rejected'
+      const listingsFailed = listingsResult.status === 'rejected'
+
+      if (categoriesResult.status === 'fulfilled') {
+        setCategories(Array.isArray(categoriesResult.value) ? categoriesResult.value : [])
+      } else {
+        setCategories([])
+      }
+
+      if (listingsResult.status === 'fulfilled') {
+        const listingsData = listingsResult.value
+        setMyListings(Array.isArray(listingsData) ? listingsData : [])
+      } else {
+        setMyListings([])
+      }
+
+      if (categoriesFailed && listingsFailed) {
+        setError('Seller panel data is temporarily unavailable.')
+      } else if (categoriesFailed) {
+        setDataWarning('Categories are temporarily unavailable. Listing creation may be limited.')
+      } else if (listingsFailed) {
+        setDataWarning('Your listings are temporarily unavailable. You can still use available seller tools.')
+      }
     } catch (err) {
       setError(err.message || 'Could not load your seller panel')
     } finally {
@@ -110,7 +138,8 @@ export default function MyProductsPage() {
         price: '',
         stock: '0',
       })
-      await fetchMyListings()
+      const listingsData = await fetchMyListings()
+      setMyListings(Array.isArray(listingsData) ? listingsData : [])
     } catch (err) {
       setPublishError(err.message || 'Could not publish product')
     } finally {
@@ -179,8 +208,9 @@ export default function MyProductsPage() {
 
       {loading && <p className="seller-state">Loading your products...</p>}
       {!loading && error && <p className="seller-error">{error}</p>}
+      {!loading && !error && dataWarning && <p className="seller-warning">{dataWarning}</p>}
 
-      {!loading && !error && (
+      {!loading && (
         <>
           <article className="seller-card">
             <h3>Create product</h3>
