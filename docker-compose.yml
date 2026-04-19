@@ -182,6 +182,8 @@ services:
         condition: service_started
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      API_SERVER_URL: http://api-gateway:8000
     ports:
       - "${FRONTEND_EXTERNAL_PORT:-3000}:3000"
 
