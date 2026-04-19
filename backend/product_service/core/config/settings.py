@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     auth_session_prefix: str = "auth:session"
     auth_blacklist_prefix: str = "auth:blacklist"
     require_redis_session: bool = True
+    redis_fail_open: bool = True
     user_service_base_url: str = "http://user-service:8000"
     seller_name_cache_ttl_seconds: int = 900
     category_name_cache_ttl_seconds: int = 900

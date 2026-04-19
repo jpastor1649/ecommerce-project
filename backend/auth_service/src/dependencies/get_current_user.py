@@ -1,6 +1,7 @@
 """Authentication dependency for protected endpoints."""
 
 import hashlib
+import logging
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -15,6 +16,7 @@ from auth_service.src.dependencies.get_db import get_db
 from auth_service.src.models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def _session_key(token: str) -> str:
@@ -41,16 +43,26 @@ async def get_current_user(
     token = credentials.credentials
 
     redis_client = get_redis_client()
-    if await redis_client.exists(_blacklist_key(token)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token revoked",
-        )
-    if not await redis_client.exists(_session_key(token)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired",
-        )
+    try:
+        if await redis_client.exists(_blacklist_key(token)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token revoked",
+            )
+        if settings.require_redis_session and not await redis_client.exists(_session_key(token)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        if not settings.redis_fail_open:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Session store unavailable",
+            )
+        logger.warning("Redis unavailable while validating token; continuing with JWT fallback")
 
     try:
         payload = jwt.decode(

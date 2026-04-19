@@ -157,11 +157,11 @@ services:
     restart: unless-stopped
     depends_on:
       auth-service:
-        condition: service_healthy
+        condition: service_started
       user-service:
-        condition: service_healthy
+        condition: service_started
       product-service:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "${API_GATEWAY_EXTERNAL_PORT:-8000}:8000"
     volumes:
