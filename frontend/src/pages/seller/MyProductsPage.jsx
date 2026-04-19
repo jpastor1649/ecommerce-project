@@ -14,9 +14,9 @@ function formatPrice(price) {
   }).format(value)
 }
 
-export default function MyProductsPage() {
-  const [categories, setCategories] = useState([])
-  const [myListings, setMyListings] = useState([])
+export default function MyProductsPage({ initialData = {} }) {
+  const [categories, setCategories] = useState(initialData.categories || [])
+  const [myListings, setMyListings] = useState(initialData.listings || [])
   const [loading, setLoading] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')

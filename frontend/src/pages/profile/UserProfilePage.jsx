@@ -40,9 +40,9 @@ async function fetchJson(url, options = {}) {
   return data
 }
 
-export default function UserProfilePage() {
-  const [profile, setProfile] = useState(null)
-  const [addresses, setAddresses] = useState([])
+export default function UserProfilePage({ initialData = {} }) {
+  const [profile, setProfile] = useState(initialData.userProfile || null)
+  const [addresses, setAddresses] = useState(initialData.addresses || [])
   const [myListings, setMyListings] = useState([])
   const [myReviews, setMyReviews] = useState([])
   const [reviewsReceived, setReviewsReceived] = useState([])
