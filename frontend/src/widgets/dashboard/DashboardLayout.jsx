@@ -72,13 +72,28 @@ export default function DashboardLayout() {
         </button>
       </section>
 
-      <section className="dashboard-hero">
+      <section className="dashboard-hero" aria-labelledby="dashboard-hero-title">
         <div className="dashboard-hero-copy">
           <p className="dashboard-hero-kicker">Customer Area</p>
-          <h1>Control your shopping experience</h1>
-          <p>Navigate between catalog, seller area, and profile from one dashboard.</p>
+          <h1 id="dashboard-hero-title">Your marketplace command center</h1>
+          <p className="dashboard-hero-lead">
+            Explore products, manage your listings, and keep your profile updated from one
+            polished dashboard.
+          </p>
+          <div className="dashboard-hero-badges" aria-label="Key dashboard benefits">
+            <span className="dashboard-hero-badge">Fast checkout</span>
+            <span className="dashboard-hero-badge">Smart listings</span>
+            <span className="dashboard-hero-badge">Real-time stock</span>
+          </div>
         </div>
-        <img src={heroImg} className="dashboard-hero-image" width="170" height="179" alt="" />
+
+        <aside className="dashboard-hero-aside" aria-label="Dashboard highlights">
+          <div className="dashboard-hero-metric">
+            <p className="dashboard-hero-metric-value">24/7</p>
+            <p className="dashboard-hero-metric-label">access to your store tools</p>
+          </div>
+          <img src={heroImg} className="dashboard-hero-image" width="170" height="179" alt="" />
+        </aside>
       </section>
 
       <section className="dashboard-content">
