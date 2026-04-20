@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'
@@ -26,14 +26,6 @@ export default function ProductCatalogClient({ initialProducts = [], initialCate
   const [warning, setWarning] = useState('')
 
   const hasProducts = useMemo(() => products.length > 0, [products])
-
-  const fetchCategories = async () => {
-    const response = await fetch(`${API_BASE_URL}/products/categories`, {
-      headers: getAuthHeaders()
-    })
-    if (!response.ok) throw new Error('Could not load categories')
-    return await response.json()
-  }
 
   const fetchProducts = async (categorySlug = '') => {
     const url = new URL(`${API_BASE_URL}/products/`)
@@ -63,37 +55,6 @@ export default function ProductCatalogClient({ initialProducts = [], initialCate
     if (!response.ok) throw new Error('Search request failed')
     return await response.json()
   }
-
-  const loadInitialData = async () => {
-    setLoading(true)
-    setError('')
-    setWarning('')
-    try {
-      const [categoriesResult, productsResult] = await Promise.allSettled([
-        fetchCategories(),
-        fetchProducts(selectedCategory),
-      ])
-
-      if (categoriesResult.status === 'fulfilled') {
-        setCategories(Array.isArray(categoriesResult.value) ? categoriesResult.value : [])
-      } else {
-        setCategories([])
-        setWarning('Categories are temporarily unavailable. You can still browse products.')
-      }
-
-      if (productsResult.status === 'fulfilled') {
-        setProducts(Array.isArray(productsResult.value) ? productsResult.value : [])
-      } else {
-        setProducts([])
-        throw new Error('Could not load products')
-      }
-    } catch (err) {
-      setError(err.message || 'Error loading data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
 
   const handleCategoryChange = async (event) => {
     const categorySlug = event.target.value

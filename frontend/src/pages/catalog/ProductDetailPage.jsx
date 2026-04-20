@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'
 import './ProductDetailPage.css'
@@ -19,19 +19,19 @@ function Stars({ rating }) {
   return <span>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>
 }
 
-export default function ProductDetailPage() {
+export default function ProductDetailPage({ productId, initialData = {} }) {
   const router = useRouter()
-  const { productId } = useParams()
+  const hasInitialSSRData = Boolean(initialData?.hydrated)
 
-  const [product, setProduct] = useState(null)
-  const [categoryName, setCategoryName] = useState('Unknown category')
-  const [sellerName, setSellerName] = useState('Unknown seller')
-  const [images, setImages] = useState([])
-  const [reviews, setReviews] = useState([])
-  const [reviewerLabels, setReviewerLabels] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [loadWarning, setLoadWarning] = useState('')
+  const [product, setProduct] = useState(initialData.product || null)
+  const [categoryName, setCategoryName] = useState(initialData.categoryName || 'Unknown category')
+  const [sellerName, setSellerName] = useState(initialData.sellerName || 'Unknown seller')
+  const [images, setImages] = useState(Array.isArray(initialData.images) ? initialData.images : [])
+  const [reviews, setReviews] = useState(Array.isArray(initialData.reviews) ? initialData.reviews : [])
+  const [reviewerLabels, setReviewerLabels] = useState(initialData.reviewerLabels || {})
+  const [loading, setLoading] = useState(!hasInitialSSRData)
+  const [error, setError] = useState(initialData.error || '')
+  const [loadWarning, setLoadWarning] = useState(initialData.loadWarning || '')
   const [reviewing, setReviewing] = useState(false)
   const [reviewError, setReviewError] = useState('')
   const [reviewSuccess, setReviewSuccess] = useState('')
@@ -44,6 +44,12 @@ export default function ProductDetailPage() {
   }, [reviews])
 
   const loadProductDetail = async () => {
+    if (!productId) {
+      setError('Invalid product identifier.')
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError('')
     setLoadWarning('')
@@ -169,9 +175,29 @@ export default function ProductDetailPage() {
   }
 
   useEffect(() => {
-    loadProductDetail()
+    if (hasInitialSSRData) {
+      return
+    }
+
+    void loadProductDetail()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId])
+  }, [productId, hasInitialSSRData])
+
+  useEffect(() => {
+    if (!hasInitialSSRData) {
+      return
+    }
+
+    setProduct(initialData.product || null)
+    setCategoryName(initialData.categoryName || 'Unknown category')
+    setSellerName(initialData.sellerName || 'Unknown seller')
+    setImages(Array.isArray(initialData.images) ? initialData.images : [])
+    setReviews(Array.isArray(initialData.reviews) ? initialData.reviews : [])
+    setReviewerLabels(initialData.reviewerLabels || {})
+    setLoadWarning(initialData.loadWarning || '')
+    setError(initialData.error || '')
+    setLoading(false)
+  }, [hasInitialSSRData, initialData, productId])
 
   const handleReviewInput = (event) => {
     const { name, value } = event.target

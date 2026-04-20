@@ -17,7 +17,7 @@ function formatPrice(price) {
 export default function MyProductsPage({ initialData = {} }) {
   const [categories, setCategories] = useState(initialData.categories || [])
   const [myListings, setMyListings] = useState(initialData.listings || [])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(!initialData?.hydrated)
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
   const [dataWarning, setDataWarning] = useState('')
@@ -95,7 +95,9 @@ export default function MyProductsPage({ initialData = {} }) {
   }
 
   useEffect(() => {
-    loadData()
+    if (!initialData?.hydrated) {
+      void loadData()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

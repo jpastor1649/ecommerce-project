@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import ProductCatalogClient from '../../../pages/catalog/ProductCatalogClient'
 
-const API_SERVER_URL = (process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || 'http://api-gateway:8000').replace(/\/\$/, '')
+const API_SERVER_URL = (process.env.API_SERVER_URL || process.env.NEXT_PUBLIC_API_URL || 'http://api-gateway:8000').replace(/\/$/, '')
 
 async function getInitialData(token) {
   const headers = {

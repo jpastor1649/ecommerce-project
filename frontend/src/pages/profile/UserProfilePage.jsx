@@ -48,15 +48,18 @@ export default function UserProfilePage({ initialData = {} }) {
   const [reviewsReceived, setReviewsReceived] = useState([])
   const [productLabels, setProductLabels] = useState({})
   const [reviewerLabels, setReviewerLabels] = useState({})
-  const [profileForm, setProfileForm] = useState({ name: '', phone: '' })
+  const [profileForm, setProfileForm] = useState({
+    name: initialData.userProfile?.name || '',
+    phone: initialData.userProfile?.phone || '',
+  })
   const [addressForm, setAddressForm] = useState(createEmptyAddress())
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(!initialData?.hydrated)
   const [productSectionLoading, setProductSectionLoading] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
   const [addressSaving, setAddressSaving] = useState(false)
 
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialData.error || '')
   const [productDataWarning, setProductDataWarning] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
@@ -206,7 +209,14 @@ export default function UserProfilePage({ initialData = {} }) {
   }
 
   useEffect(() => {
-    loadUserData()
+    if (initialData?.hydrated) {
+      if (initialData?.userProfile) {
+        void loadProductData()
+      }
+      return
+    }
+
+    void loadUserData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
