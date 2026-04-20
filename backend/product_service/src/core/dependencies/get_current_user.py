@@ -9,8 +9,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
-from product_service.core.config.settings import settings
-from product_service.core.redis_client import get_redis_client
+from product_service.src.core.config.settings import settings
+from product_service.src.core.redis_client import get_redis_client
 
 bearer_scheme = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)

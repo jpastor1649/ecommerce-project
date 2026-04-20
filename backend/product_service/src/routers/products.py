@@ -5,13 +5,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from product_service.core.dependencies.get_db import get_db
-from product_service.core.dependencies.get_current_user import (
+from product_service.src.core.dependencies.get_db import get_db
+from product_service.src.core.dependencies.get_current_user import (
     AuthenticatedUser,
     get_current_user,
 )
-from product_service.services.product_service import ProductService
-from product_service.schemas.product import (
+from product_service.src.services.product_service import ProductService
+from product_service.src.schemas.product import (
     CategoryCreate,
     CategoryResponse,
     CategoryUpdate,

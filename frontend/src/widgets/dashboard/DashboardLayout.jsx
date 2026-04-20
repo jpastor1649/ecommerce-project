@@ -14,6 +14,10 @@ const NAV_ITEMS = [
     label: 'Catalog',
   },
   {
+    href: '/dashboard/orders',
+    label: 'Orders',
+  },
+  {
     href: '/dashboard/my-products',
     label: 'My products',
   },
@@ -32,6 +36,15 @@ const HERO_SECTIONS = {
     badges: ['Smart filters', 'Live availability', 'Fast checkout'],
     metricValue: '24/7',
     metricLabel: 'live access to your product catalog',
+  },
+  orders: {
+    key: 'orders',
+    kicker: 'Order Center',
+    title: 'Track your purchases from creation to delivery',
+    lead: 'Review status changes, inspect line items, and cancel eligible orders without leaving your dashboard.',
+    badges: ['Live status', 'Cancel eligible orders', 'Full shipping snapshot'],
+    metricValue: '1 click',
+    metricLabel: 'to review your latest purchase details',
   },
   'my-products': {
     key: 'my-products',
@@ -54,6 +67,10 @@ const HERO_SECTIONS = {
 }
 
 function getActiveSection(pathname) {
+  if (pathname?.startsWith('/dashboard/orders')) {
+    return HERO_SECTIONS.orders
+  }
+
   if (pathname?.startsWith('/dashboard/my-products')) {
     return HERO_SECTIONS['my-products']
   }

@@ -19,6 +19,34 @@ function Stars({ rating }) {
   return <span>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>
 }
 
+function createInitialOrderForm() {
+  return {
+    full_name: '',
+    street: '',
+    city: '',
+    state: '',
+    country: '',
+    postal_code: '',
+    phone: '',
+    notes: '',
+  }
+}
+
+function extractErrorDetail(data, fallback) {
+  if (typeof data?.detail === 'string' && data.detail.trim()) {
+    return data.detail
+  }
+
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    const firstMessage = data.detail[0]?.msg
+    if (typeof firstMessage === 'string' && firstMessage.trim()) {
+      return firstMessage
+    }
+  }
+
+  return fallback
+}
+
 export default function ProductDetailPage({ productId, initialData = {} }) {
   const router = useRouter()
   const hasInitialSSRData = Boolean(initialData?.hydrated)
@@ -36,6 +64,11 @@ export default function ProductDetailPage({ productId, initialData = {} }) {
   const [reviewError, setReviewError] = useState('')
   const [reviewSuccess, setReviewSuccess] = useState('')
   const [reviewForm, setReviewForm] = useState({ rating: '5', comment: '' })
+  const [orderForm, setOrderForm] = useState(createInitialOrderForm())
+  const [orderQuantity, setOrderQuantity] = useState('1')
+  const [placingOrder, setPlacingOrder] = useState(false)
+  const [orderError, setOrderError] = useState('')
+  const [orderSuccess, setOrderSuccess] = useState('')
 
   const averageRating = useMemo(() => {
     if (!reviews.length) return 0
@@ -204,6 +237,11 @@ export default function ProductDetailPage({ productId, initialData = {} }) {
     setReviewForm((prev) => ({ ...prev, [name]: value }))
   }
 
+  const handleOrderInput = (event) => {
+    const { name, value } = event.target
+    setOrderForm((prev) => ({ ...prev, [name]: value }))
+  }
+
   const handleSubmitReview = async (event) => {
     event.preventDefault()
     setReviewError('')
@@ -232,6 +270,63 @@ export default function ProductDetailPage({ productId, initialData = {} }) {
       setReviewError(err.message || 'Could not submit review')
     } finally {
       setReviewing(false)
+    }
+  }
+
+  const handleCreateOrder = async (event) => {
+    event.preventDefault()
+
+    if (!product?.id) {
+      return
+    }
+
+    setOrderError('')
+    setOrderSuccess('')
+    setPlacingOrder(true)
+
+    try {
+      const quantity = Math.max(1, Number.parseInt(orderQuantity, 10) || 1)
+
+      const payload = {
+        items: [
+          {
+            product_id: product.id,
+            quantity,
+          },
+        ],
+        shipping_address: {
+          full_name: orderForm.full_name.trim(),
+          street: orderForm.street.trim(),
+          city: orderForm.city.trim(),
+          state: orderForm.state.trim(),
+          country: orderForm.country.trim(),
+          postal_code: orderForm.postal_code.trim(),
+          phone: orderForm.phone.trim() || null,
+        },
+        notes: orderForm.notes.trim() || null,
+      }
+
+      const response = await fetch(`${API_BASE_URL}/orders/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(extractErrorDetail(data, 'Could not create order'))
+      }
+
+      setOrderSuccess(`Order #${String(data?.id || '').slice(0, 8)} was created successfully.`)
+      setOrderQuantity('1')
+      setOrderForm((prev) => ({
+        ...prev,
+        notes: '',
+      }))
+    } catch (err) {
+      setOrderError(err.message || 'Could not create order')
+    } finally {
+      setPlacingOrder(false)
     }
   }
 
@@ -286,6 +381,131 @@ export default function ProductDetailPage({ productId, initialData = {} }) {
           <p className="detail-average">{averageRating.toFixed(1)} / 5</p>
           <p>{reviews.length} review(s)</p>
         </aside>
+      </article>
+
+      <article className="detail-card detail-order-card">
+        <h3>Buy now</h3>
+        <p className="detail-muted">Create an order for this product through order-service.</p>
+
+        {product.stock <= 0 && (
+          <p className="detail-warning">This item is currently out of stock and cannot be ordered.</p>
+        )}
+        {orderError && <p className="detail-error">{orderError}</p>}
+        {orderSuccess && <p className="detail-success">{orderSuccess}</p>}
+
+        <form className="detail-order-form" onSubmit={handleCreateOrder}>
+          <div className="detail-order-grid">
+            <label>
+              Quantity
+              <input
+                type="number"
+                min="1"
+                max={String(Math.max(1, Number(product.stock) || 1))}
+                value={orderQuantity}
+                onChange={(event) => setOrderQuantity(event.target.value)}
+                required
+              />
+            </label>
+
+            <label>
+              Full name
+              <input
+                name="full_name"
+                value={orderForm.full_name}
+                onChange={handleOrderInput}
+                minLength={2}
+                maxLength={100}
+                required
+              />
+            </label>
+
+            <label>
+              Street
+              <input
+                name="street"
+                value={orderForm.street}
+                onChange={handleOrderInput}
+                minLength={5}
+                maxLength={200}
+                required
+              />
+            </label>
+
+            <label>
+              City
+              <input
+                name="city"
+                value={orderForm.city}
+                onChange={handleOrderInput}
+                minLength={2}
+                maxLength={100}
+                required
+              />
+            </label>
+
+            <label>
+              State
+              <input
+                name="state"
+                value={orderForm.state}
+                onChange={handleOrderInput}
+                minLength={2}
+                maxLength={100}
+                required
+              />
+            </label>
+
+            <label>
+              Country
+              <input
+                name="country"
+                value={orderForm.country}
+                onChange={handleOrderInput}
+                minLength={2}
+                maxLength={100}
+                required
+              />
+            </label>
+
+            <label>
+              Postal code
+              <input
+                name="postal_code"
+                value={orderForm.postal_code}
+                onChange={handleOrderInput}
+                minLength={3}
+                maxLength={20}
+                required
+              />
+            </label>
+
+            <label>
+              Phone (optional)
+              <input
+                name="phone"
+                value={orderForm.phone}
+                onChange={handleOrderInput}
+                maxLength={20}
+              />
+            </label>
+          </div>
+
+          <label>
+            Notes (optional)
+            <textarea
+              name="notes"
+              value={orderForm.notes}
+              onChange={handleOrderInput}
+              rows={3}
+              maxLength={500}
+              placeholder="Delivery references, preferences, or extra context"
+            />
+          </label>
+
+          <button type="submit" disabled={placingOrder || product.stock <= 0}>
+            {placingOrder ? 'Creating order...' : 'Create order'}
+          </button>
+        </form>
       </article>
 
       <article className="detail-card">

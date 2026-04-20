@@ -1,6 +1,7 @@
 """Product Service - Business logic for product catalog operations."""
 
 import re
+from collections import defaultdict
 from uuid import UUID
 import httpx
 from sqlalchemy import select, or_, func
@@ -8,14 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
-from product_service.models.product import (
+from product_service.src.models.product import (
     Category,
     Product,
     ProductImage,
     ProductReview,
 )
-from product_service.core.config.settings import settings
-from product_service.core.redis_client import get_redis_client
+from product_service.src.core.config.settings import settings
+from product_service.src.core.redis_client import get_redis_client
 
 
 class ProductService:
@@ -605,3 +606,91 @@ class ProductService:
             "reviews_count": int(reviews_count or 0),
             "average_rating": float(average_rating or 0),
         }
+
+    async def get_stock_info(self, product_ids: list[UUID]) -> list[dict]:
+        """Return stock and pricing details for requested products."""
+        unique_ids = list(dict.fromkeys(product_ids))
+        if not unique_ids:
+            return []
+
+        result = await self.db.execute(select(Product).where(Product.id.in_(unique_ids)))
+        products_by_id = {product.id: product for product in result.scalars().all()}
+
+        items: list[dict] = []
+        for product_id in unique_ids:
+            product = products_by_id.get(product_id)
+            if product is None:
+                continue
+
+            items.append(
+                {
+                    "product_id": product.id,
+                    "name": product.name,
+                    "price": product.price,
+                    "stock": product.stock,
+                    "available": bool(product.is_active and product.stock > 0),
+                }
+            )
+
+        return items
+
+    async def reserve_stock(self, items: list[dict]) -> None:
+        """Atomically reserve stock for multiple products."""
+        totals_by_product_id: dict[UUID, int] = defaultdict(int)
+        for item in items:
+            totals_by_product_id[item["product_id"]] += int(item["quantity"])
+
+        product_ids = list(totals_by_product_id.keys())
+        result = await self.db.execute(
+            select(Product).where(Product.id.in_(product_ids)).with_for_update()
+        )
+        products_by_id = {product.id: product for product in result.scalars().all()}
+
+        missing = [str(pid) for pid in product_ids if pid not in products_by_id]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Products not found: {', '.join(missing)}",
+            )
+
+        for product_id, requested_qty in totals_by_product_id.items():
+            product = products_by_id[product_id]
+            if not product.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{product.name}' is not available.",
+                )
+            if product.stock < requested_qty:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Insufficient stock for '{product.name}'.",
+                )
+
+        for product_id, requested_qty in totals_by_product_id.items():
+            products_by_id[product_id].stock -= requested_qty
+
+        await self.db.commit()
+
+    async def release_stock(self, items: list[dict]) -> None:
+        """Release previously reserved stock for multiple products."""
+        totals_by_product_id: dict[UUID, int] = defaultdict(int)
+        for item in items:
+            totals_by_product_id[item["product_id"]] += int(item["quantity"])
+
+        product_ids = list(totals_by_product_id.keys())
+        result = await self.db.execute(
+            select(Product).where(Product.id.in_(product_ids)).with_for_update()
+        )
+        products_by_id = {product.id: product for product in result.scalars().all()}
+
+        missing = [str(pid) for pid in product_ids if pid not in products_by_id]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Products not found: {', '.join(missing)}",
+            )
+
+        for product_id, quantity in totals_by_product_id.items():
+            products_by_id[product_id].stock += quantity
+
+        await self.db.commit()

@@ -164,6 +164,24 @@
   --hero-base-gradient: linear-gradient(135deg, #f5ffeb 0%, #f4fff6 36%, #ebf9f2 100%);
 }
 
+.dashboard-hero--orders {
+  --hero-kicker: #145a68;
+  --hero-title: #173742;
+  --hero-lead: #2d4e59;
+  --hero-badge-border: rgba(20, 90, 104, 0.24);
+  --hero-badge-bg: rgba(236, 252, 255, 0.82);
+  --hero-badge-text: #1a5a69;
+  --hero-aside-border: rgba(44, 131, 150, 0.24);
+  --hero-aside-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(231, 248, 252, 0.92));
+  --hero-circle: rgba(58, 182, 214, 0.16);
+  --hero-metric-border: rgba(44, 131, 150, 0.22);
+  --hero-metric-value: #166a7d;
+  --hero-metric-label: #356573;
+  --hero-primary-glow: rgba(186, 250, 255, 0.62);
+  --hero-secondary-glow: rgba(71, 192, 222, 0.24);
+  --hero-base-gradient: linear-gradient(135deg, #f0ffff 0%, #f3fdff 38%, #e9f8ff 100%);
+}
+
 .dashboard-hero--profile {
   --hero-kicker: #8b4a0a;
   --hero-title: #51351d;
