@@ -4,14 +4,14 @@ skinparam componentStyle rectangle
 skinparam shadowing false
 left to right direction
 
-title Decomposition View - Current Implementation
+title Decomposition View - Current Implementation (Apr 2026)
 
 package "ecommerce-project" {
-  package "frontend" {
-    component "app\n(routes + shell)" as FEApp
-    component "pages\n(route screens)" as FEPages
-    component "widgets\n(composed UI)" as FEWidgets
-    component "shared\n(config + libs)" as FEShared
+  package "frontend (Next.js 14)" {
+    component "app\n(route entrypoints + SSR)" as FEApp
+    component "pages\n(client feature screens)" as FEPages
+    component "widgets\n(composed dashboard UI)" as FEWidgets
+    component "shared\n(config + auth + helpers)" as FEShared
 
     FEApp --> FEPages : route composition
     FEPages --> FEWidgets : UI composition
@@ -52,11 +52,24 @@ package "ecommerce-project" {
       ProductServices --> ProductDomain
       ProductServices --> ProductCore
     }
+
+    package "order-service" {
+      component "routers" as OrderRouters
+      component "services" as OrderServices
+      component "models/schemas" as OrderDomain
+      component "core/events" as OrderCore
+
+      OrderRouters --> OrderServices
+      OrderServices --> OrderDomain
+      OrderServices --> OrderCore
+    }
   }
 
   package "platform connectors" {
     component "api-gateway\n(Nginx)" as Gateway
-    database "PostgreSQL" as Pg
+    database "auth-postgres" as AuthPg
+    database "user-postgres\n(shared with product-service)" as UserPg
+    database "order-postgres" as OrderPg
     database "Redis" as Redis
     queue "RabbitMQ" as MQ
   }
@@ -66,16 +79,21 @@ FEApp --> Gateway : REST
 Gateway --> AuthRouters : /auth/*
 Gateway --> UserRouters : /users/*, /internal/*
 Gateway --> ProductRouters : /products/*
+Gateway --> OrderRouters : /orders/*
 
-AuthCore --> Pg : auth DB
+AuthCore --> AuthPg : auth DB
 AuthCore --> Redis : sessions/blacklist
 AuthCore --> MQ : publish events
 
-UserCore --> Pg : user DB
+UserCore --> UserPg : user DB
 UserCore --> MQ : consume events
 
-ProductCore --> Pg : product DB
-ProductCore --> Redis : auth/cache
+ProductCore --> UserPg : product DB tables
+ProductCore --> Redis : token/cache
 ProductServices --> UserServices : seller lookup (HTTP)
+
+OrderCore --> OrderPg : order DB
+OrderCore --> MQ : publish order events
+OrderServices --> ProductServices : stock info / reserve / release
 
 @enduml
