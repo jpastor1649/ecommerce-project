@@ -10,7 +10,7 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from product_service.models.product import Category, Product
+from product_service.src.models.product import Category, Product
 
 
 SEED_SELLER_USER_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")

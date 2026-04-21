@@ -22,7 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from product_service.models.base import Base
+from product_service.src.models.base import Base
 
 
 class Category(Base):

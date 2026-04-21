@@ -14,6 +14,15 @@ function formatPrice(price) {
   }).format(value)
 }
 
+function formatDate(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Unknown date'
+  return new Intl.DateTimeFormat('es-CO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
 function createEmptyAddress() {
   return {
     address_line: '',
@@ -46,8 +55,10 @@ export default function UserProfilePage({ initialData = {} }) {
   const [myListings, setMyListings] = useState([])
   const [myReviews, setMyReviews] = useState([])
   const [reviewsReceived, setReviewsReceived] = useState([])
+  const [salesOnMyProducts, setSalesOnMyProducts] = useState([])
   const [productLabels, setProductLabels] = useState({})
   const [reviewerLabels, setReviewerLabels] = useState({})
+  const [buyerLabels, setBuyerLabels] = useState({})
   const [profileForm, setProfileForm] = useState({
     name: initialData.userProfile?.name || '',
     phone: initialData.userProfile?.phone || '',
@@ -72,8 +83,10 @@ export default function UserProfilePage({ initialData = {} }) {
     setMyListings([])
     setMyReviews([])
     setReviewsReceived([])
+    setSalesOnMyProducts([])
     setProductLabels({})
     setReviewerLabels({})
+    setBuyerLabels({})
 
     try {
       const productCalls = await Promise.allSettled([
@@ -86,24 +99,36 @@ export default function UserProfilePage({ initialData = {} }) {
         fetchJson(`${API_BASE_URL}/products/mine/listings`, {
           headers: getAuthHeaders(),
         }),
+        fetchJson(`${API_BASE_URL}/orders/sales/mine?page=1&page_size=50`, {
+          headers: getAuthHeaders(),
+        }),
       ])
 
       const authoredReviews = productCalls[0].status === 'fulfilled' ? productCalls[0].value : []
       const sellerReviews = productCalls[1].status === 'fulfilled' ? productCalls[1].value : []
       const listings = productCalls[2].status === 'fulfilled' ? productCalls[2].value : []
+      const salesResult = productCalls[3].status === 'fulfilled' ? productCalls[3].value : {}
 
-      const hasProductFailures = productCalls.some((call) => call.status === 'rejected')
-      if (hasProductFailures) {
+      const hasProductFailures = productCalls.slice(0, 3).some((call) => call.status === 'rejected')
+      const hasSalesFailures = productCalls[3].status === 'rejected'
+
+      if (hasProductFailures && hasSalesFailures) {
+        setProductDataWarning('Product and sales data are temporarily unavailable. Profile data remains available.')
+      } else if (hasProductFailures) {
         setProductDataWarning('Product service is unavailable. Profile data remains available, but listing/review sections may be incomplete.')
+      } else if (hasSalesFailures) {
+        setProductDataWarning('Sales information is temporarily unavailable right now.')
       }
 
       const safeListings = Array.isArray(listings) ? listings : []
       const safeMyReviews = Array.isArray(authoredReviews) ? authoredReviews : []
       const safeSellerReviews = Array.isArray(sellerReviews) ? sellerReviews : []
+      const safeSales = Array.isArray(salesResult?.items) ? salesResult.items : []
 
       setMyListings(safeListings)
       setMyReviews(safeMyReviews)
       setReviewsReceived(safeSellerReviews)
+      setSalesOnMyProducts(safeSales)
 
       const listingLabelMap = Object.fromEntries(
         safeListings.map((product) => [String(product.id), product.name || String(product.id)])
@@ -162,6 +187,32 @@ export default function UserProfilePage({ initialData = {} }) {
         }
       }))
       setReviewerLabels(Object.fromEntries(reviewerEntries))
+
+      const buyerIds = [...new Set(safeSales.map((sale) => String(sale.buyer_user_id)).filter(Boolean))]
+      const buyerEntries = await Promise.all(buyerIds.map(async (id) => {
+        try {
+          const userResponse = await fetch(`${API_BASE_URL}/users/${id}`, {
+            headers: getAuthHeaders(),
+          })
+          const userData = await userResponse.json().catch(() => ({}))
+          if (userResponse.ok) {
+            return [id, userData?.name || userData?.email || id]
+          }
+
+          const authResponse = await fetch(`${API_BASE_URL}/auth/users/${id}`, {
+            headers: getAuthHeaders(),
+          })
+          const authData = await authResponse.json().catch(() => ({}))
+          if (authResponse.ok) {
+            return [id, authData?.email || id]
+          }
+
+          return [id, id]
+        } catch {
+          return [id, id]
+        }
+      }))
+      setBuyerLabels(Object.fromEntries(buyerEntries))
     } catch {
       setProductDataWarning('Product information is temporarily unavailable.')
     } finally {
@@ -480,6 +531,27 @@ export default function UserProfilePage({ initialData = {} }) {
                       <p>{product.name}</p>
                       <p>Price: {formatPrice(product.price)}</p>
                       <p>Stock: {product.stock}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+
+            <article className="user-address-card">
+              <h3>Sales on your listings</h3>
+              {salesOnMyProducts.length === 0 ? (
+                <p className="user-panel-state">No one has purchased your products yet.</p>
+              ) : (
+                <ul className="address-list">
+                  {salesOnMyProducts.map((sale) => (
+                    <li className="address-item" key={`${sale.order_id}-${sale.product_id}-${sale.created_at}`}>
+                      <p>Product: {sale.product_name || productLabels[String(sale.product_id)] || sale.product_id}</p>
+                      <p>Buyer: {buyerLabels[String(sale.buyer_user_id)] || sale.buyer_user_id}</p>
+                      <p>Quantity sold: {sale.quantity}</p>
+                      <p>Total paid: {formatPrice(sale.paid_amount)}</p>
+                      <p>Unit price: {formatPrice(sale.unit_price)}</p>
+                      <p>Order: #{String(sale.order_id).slice(0, 8)} - {sale.order_status}</p>
+                      <p>Date: {formatDate(sale.created_at)}</p>
                     </li>
                   ))}
                 </ul>

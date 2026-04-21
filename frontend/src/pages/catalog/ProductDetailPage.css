@@ -124,7 +124,24 @@
   gap: 10px;
 }
 
-.detail-review-form label {
+.detail-order-card {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-order-form {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-order-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-review-form label,
+.detail-order-form label {
   display: grid;
   gap: 6px;
   color: var(--text-h);
@@ -133,13 +150,16 @@
 }
 
 .detail-review-form select,
-.detail-review-form textarea {
+.detail-review-form textarea,
+.detail-order-form input,
+.detail-order-form textarea {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   background: var(--bg);
   color: var(--text-h);
   font-size: 14px;
+  color-scheme: light;
 }
 
 .detail-review-form button {
@@ -152,7 +172,18 @@
   cursor: pointer;
 }
 
-.detail-review-form button:disabled {
+.detail-order-form button {
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.detail-review-form button:disabled,
+.detail-order-form button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
@@ -182,5 +213,9 @@
 @media (max-width: 768px) {
   .product-detail-section {
     width: calc(100% - 24px);
+  }
+
+  .detail-order-grid {
+    grid-template-columns: 1fr;
   }
 }

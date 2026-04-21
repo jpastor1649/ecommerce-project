@@ -5,7 +5,7 @@ Provides async SQLAlchemy engine and session factory for PostgreSQL.
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from product_service.core.config.settings import settings
+from product_service.src.core.config.settings import settings
 
 # Create the async engine for PostgreSQL
 engine = create_async_engine(

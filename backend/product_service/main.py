@@ -9,14 +9,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from product_service.core.config.settings import settings
-from product_service.core.database import engine, async_session_local
-from product_service.core.redis_client import close_redis_connection
-from product_service.core.redis_client import get_redis_client
-from product_service.core.seeds import seed_initial_data
-from product_service.models.base import Base
-from product_service.routers.auth import router as auth_router
-from product_service.routers.products import router as products_router
+from product_service.src.core.config.settings import settings
+from product_service.src.core.database import engine, async_session_local
+from product_service.src.core.redis_client import close_redis_connection
+from product_service.src.core.redis_client import get_redis_client
+from product_service.src.core.seeds import seed_initial_data
+from product_service.src.models.base import Base
+from product_service.src.routers.auth import router as auth_router
+from product_service.src.routers.internal_inventory import router as internal_inventory_router
+from product_service.src.routers.products import router as products_router
 
 
 @asynccontextmanager
@@ -68,6 +69,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(products_router)
+app.include_router(internal_inventory_router)
 
 
 @app.get("/health")

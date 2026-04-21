@@ -4,17 +4,23 @@ skinparam componentStyle rectangle
 skinparam shadowing false
 left to right direction
 
-title Presentation View - Frontend Layered Structure (Current)
+title Presentation View - Frontend Layered Structure (Current, Next.js)
 
 actor "Authenticated User" as User
 
 package "frontend/src" {
   package "app" {
-    component "App.jsx\n(Routes + ProtectedRoute)" as App
+    component "layout.js + page.js\n(auth entry routes)" as AppRoot
+    component "dashboard/layout.js\n(shell + SSR viewer preload)" as DashboardLayout
+    component "dashboard/products/page.js" as RouteProducts
+    component "dashboard/products/[productId]/page.js" as RouteProductDetail
+    component "dashboard/orders/page.js" as RouteOrders
+    component "dashboard/my-products/page.js" as RouteMyProducts
+    component "dashboard/profile/page.js" as RouteProfile
   }
 
   package "widgets" {
-    component "DashboardLayout.jsx" as Dashboard
+    component "DashboardLayout.jsx" as DashboardWidget
   }
 
   package "pages/auth" {
@@ -35,6 +41,10 @@ package "frontend/src" {
     component "UserProfilePage.jsx" as Profile
   }
 
+  package "pages/orders" {
+    component "OrdersPage.jsx" as Orders
+  }
+
   package "shared" {
     component "config/api.js" as ApiConfig
     component "lib/auth.js" as AuthLib
@@ -43,23 +53,32 @@ package "frontend/src" {
 
 component "API Gateway\n(http://localhost:8000)" as Gateway
 
-User --> App : Browser navigation
-App --> Login : /
-App --> Register : /register
-App --> Dashboard : /dashboard/*
+User --> AppRoot : Browser navigation
+AppRoot --> Login : /
+AppRoot --> Register : /register
+AppRoot --> DashboardLayout : /dashboard/*
 
-Dashboard --> Catalog : /dashboard/products
-Dashboard --> Detail : /dashboard/products/:productId
-Dashboard --> MyProducts : /dashboard/my-products
-Dashboard --> Profile : /dashboard/profile
+DashboardLayout --> DashboardWidget : page shell
+DashboardLayout --> RouteProducts
+DashboardLayout --> RouteProductDetail
+DashboardLayout --> RouteOrders
+DashboardLayout --> RouteMyProducts
+DashboardLayout --> RouteProfile
 
-App --> AuthLib : token guard
+RouteProducts --> Catalog
+RouteProductDetail --> Detail
+RouteOrders --> Orders
+RouteMyProducts --> MyProducts
+RouteProfile --> Profile
+
+AppRoot --> AuthLib : cookie/token helpers
 Login --> ApiConfig
 Register --> ApiConfig
 Catalog --> ApiConfig
 Detail --> ApiConfig
 MyProducts --> ApiConfig
 Profile --> ApiConfig
+Orders --> ApiConfig
 
 ApiConfig --> Gateway : REST requests
 

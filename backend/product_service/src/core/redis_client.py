@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import redis.asyncio as redis
 
-from product_service.core.config.settings import settings
+from product_service.src.core.config.settings import settings
 
 _redis_client: redis.Redis | None = None
 
