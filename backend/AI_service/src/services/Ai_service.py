@@ -1,16 +1,19 @@
-"""Minimal AI service wrapper over Groq chat completion."""
-
-import importlib
-from typing import Any
-
-from AI_service.src.core.config import settings
-
+import os
+from groq import Groq
+from dotenv import load_dotenv
+from typing import List, Dict, Any
+import re
+from ..core.config import settings
+load_dotenv()
 
 class AiService:
-    """Simple chat assistant service for MVP usage."""
-
-    def __init__(self):
-        self.model = settings.ai_model
+    def __init__(self, product_service=None):   # ← recibe el servicio de productos
+        api_key = settings.resolved_api_key
+        if not api_key:
+            raise ValueError("GROQ_API_KEY no encontrada")
+        self.client = Groq(api_key=api_key)
+        self.model = "llama-3.1-8b-instant"
+        self.product_service = product_service   # ← para consultar productos
         self.system_prompt = (
             "Eres un asistente virtual para un e-commerce. "
             "Tienes acceso a la lista de productos reales de la tienda. "
@@ -19,44 +22,70 @@ class AiService:
             "Responde en el mismo idioma del usuario, sé breve y amable."
         )
 
-        api_key = settings.resolved_api_key
-        self.client: Any | None = self._build_client(api_key) if api_key else None
+    def _extract_keywords(self, message: str) -> str:
+        """Extrae palabras relevantes para buscar productos."""
+        # Elimina palabras comunes y deja solo términos significativos
+        stopwords = {"hola", "productos", "qué", "cómo", "cuál", "precio", "tienen", "busco", "necesito"}
+        words = re.findall(r'\b\w+\b', message.lower())
+        keywords = [w for w in words if w not in stopwords and len(w) > 2]
+        return " ".join(keywords) if keywords else ""
 
-    @staticmethod
-    def _build_client(api_key: str) -> Any | None:
-        """Build Groq client lazily to avoid hard import failures in local envs."""
+    def _search_products(self, query: str) -> List[Dict[str, Any]]:
+        """Busca productos usando el servicio de productos (si está disponible)."""
+        if not self.product_service:
+            return []
+        # Asumimos que product_service tiene un método search_products(query)
+        # Si no, puedes adaptar: por ejemplo, usar el modelo Product para hacer filtros.
         try:
-            groq_module = importlib.import_module("groq")
-            groq_cls = getattr(groq_module, "Groq")
-            return groq_cls(api_key=api_key)
-        except Exception:
-            return None
+            # Llamada asíncrona - aquí usamos un helper síncrono si es necesario
+            # Si tu product_service es asíncrono, necesitarás un evento loop.
+            # Por simplicidad, asumimos que product_service tiene un método síncrono o usamos asyncio.run()
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            results = loop.run_until_complete(
+                self.product_service.search_products(query, limit=5)
+            )
+            loop.close()
+            return results
+        except Exception as e:
+            print(f"Error buscando productos: {e}")
+            return []
 
     def get_response(self, user_message: str) -> str:
-        """Generate a single assistant response from a user message."""
-        if not user_message.strip():
-            return "Escribe un mensaje para poder ayudarte."
+        """Versión con búsqueda de productos."""
+        # 1. Extraer palabras clave
+        keywords = self._extract_keywords(user_message)
 
-        if self.client is None:
-            return (
-                "AI service activo, pero sin API key configurada. "
-                "Define AI_API_KEY en el entorno para habilitar respuestas del modelo."
-            )
+        # 2. Buscar productos relevantes
+        products_info = ""
+        if keywords and self.product_service:
+            products = self._search_products(keywords)
+            if products:
+                products_info = "\n\n**Productos disponibles:**\n"
+                for p in products[:3]:  # máx 3 productos para no saturar
+                    products_info += f"- {p.get('name')}: ${p.get('price')} - {p.get('description', '')[:100]}\n"
 
+        # 3. Construir mensaje enriquecido
+        enriched_message = user_message
+        if products_info:
+            enriched_message = f"{user_message}\n\nInformación de productos:\n{products_info}"
+
+        # 4. Llamar a Groq
         try:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": user_message},
+                    {"role": "user", "content": enriched_message}
                 ],
-                temperature=0.4,
-                max_tokens=300,
-                stream=False,
+                temperature=0.7,
+                max_tokens=500,
+                stream=False
             )
-            content = completion.choices[0].message.content if completion.choices else None
-            if isinstance(content, str) and content.strip():
-                return content.strip()
-            return "No obtuve contenido del modelo. Intenta de nuevo."
-        except Exception:
-            return "No pude procesar tu consulta en este momento."
+            return completion.choices[0].message.content
+        except Exception as e:
+            print(f"Error en Groq: {e}")
+            return "Lo siento, no pude procesar tu consulta sobre productos."
+
+    # El método stream_response se puede adaptar igual...
