@@ -16,6 +16,22 @@
 
 ---
 
+## 📋 Tabla de Contenidos
+
+- [Características Principales](#-características-principales)
+- [Arquitectura](#-arquitectura)
+- [Diagramas](#-diagramas)
+- [Vistas Arquitectónicas](#-vistas-arquitectónicas)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Inicio Rápido](#-inicio-rápido)
+- [Instalación Local](#-instalación-local)
+- [Estado de Implementación](#-estado-de-implementación)
+- [Requerimientos](#-requerimientos)
+- [Contribución](#-contribución)
+- [Equipo](#-equipo)
+
+---
+
 ## ✨ Características Principales
 
 ### 🛍️ E-commerce Core
@@ -32,6 +48,13 @@
 - **Búsqueda semántica**: búsqueda vectorial con `pgvector` y embeddings (`text-embedding-004`)
 - **Moderación automática**: revisión de reseñas con LLM — sin entrenamiento propio de modelos
 
+### 🏗️ Arquitectura Distribuida (Layered Architecture)
+- **`auth-service`** (Python / FastAPI): registro, login, JWT, sesión/blacklist en Redis
+- **`user-service`** (Python / FastAPI): perfiles y direcciones de usuario
+- **`product-service`** (Python / FastAPI): catálogo, publicaciones, reseñas, galería de imágenes
+- **`frontend`** (React + Vite): UI cliente por capas (`app`, `pages`, `widgets`, `shared`)
+- Infraestructura: PostgreSQL por servicio + Redis (NoSQL) + RabbitMQ (eventos)
+
 ### 🔄 CI/CD Pipeline (GitHub Actions)
 - ✅ **lint.yml**: Validación de código (Black, isort, Flake8 / ESLint)
 - ✅ **test.yml**: Tests unitarios + cobertura ≥75%
@@ -41,252 +64,195 @@
 
 ## 🏛️ Arquitectura
 
-![Arquitectura del Sistema](cc.svg)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              CAPA DE PRESENTACIÓN                                │
+│  Frontend React + Vite                                          │
+│  Catálogo · Publicaciones · Perfil · Reseñas                    │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ ① REST JSON/HTTPS
+      ┌────────────────┬────────────────┬────────────────┐
+      ▼                ▼                ▼                
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  auth-service   │ │  user-service   │ │ product-service │
+│  Python/FastAPI │ │  Python/FastAPI │ │  Python/FastAPI │
+└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+     │                   │                   │
+  ┌────┴─────┐        ┌────┴─────┐        ┌────┴─────┐
+  ▼          ▼        ▼          ▼        ▼          ▼
+┌──────────┐ ┌──────┐ ┌──────────┐ ┌──────┐ ┌──────────┐ ┌──────┐
+│ Auth DB  │ │Redis │ │ User DB  │ │Rabbit│ │Product DB│ │Redis │
+└──────────┘ └──────┘ └──────────┘ └──────┘ └──────────┘ └──────┘
+```
 
-#### Descripción de los elementos y relaciones Arquitectónicas 
-
-El sistema se compone de múltiples elementos arquitectónicos organizados bajo un enfoque de microservicios, donde cada componente tiene una responsabilidad específica.
-
-##### Componentes principales
-
-- **Frontend (Web Application)**  
-  Interfaz de usuario que permite la interacción con el sistema. Se comunica exclusivamente con el API Gateway mediante HTTP.
-
-- **API Gateway**  
-  Punto de entrada único al sistema. Se encarga de enrutar las solicitudes del cliente hacia los microservicios correspondientes.
-
-- **Auth Service**  
-  Responsable de la autenticación de usuarios. Gestiona credenciales, genera tokens JWT y administra sesiones mediante Redis.
-
-- **User Service**  
-  Encargado de la gestión de perfiles de usuario. Mantiene su propia base de datos y crea perfiles a partir de eventos generados por el servicio de autenticación.
-
-- **Product Service**  
-  Gestiona el catálogo de productos y las reseñas. Valida tokens JWT para autorizar las operaciones.
-
-- **Order Service**  
-  Responsable de la gestión de pedidos. Permite la creación y consulta de órdenes, valida la información de productos mediante el Product Service y publica eventos relacionados con el ciclo de vida de las órdenes.
-
-- **AI Service**  
-  Consume eventos del sistema para procesar información y generar funcionalidades inteligentes como recomendaciones y personalización.
-
-- **Message Broker (RabbitMQ)**  
-  Permite la comunicación asincrónica entre servicios mediante eventos.
-
-- **Bases de datos (PostgreSQL)**  
-  Cada microservicio mantiene su propia base de datos, garantizando independencia.
-
-- **Redis**  
-  Utilizado por el servicio de autenticación para la gestión de sesiones.
-
-##### Relaciones entre componentes
-
-- El frontend se comunica con los servicios a través del API Gateway mediante HTTP.
-- El API Gateway enruta las solicitudes hacia los microservicios correspondientes.
-- El Product Service y el Order Service pueden comunicarse sincrónicamente mediante HTTP.
-- El Auth Service publica eventos (ej. `USER_REGISTERED`) que son consumidos por el User Service.
-- El Order Service puede publicar eventos relacionados con pedidos (ej. `ORDER_CREATED`).
-- El AI Service consume eventos generados por distintos servicios para procesar información del sistema.
-- Cada microservicio accede únicamente a su propia base de datos.
-- Redis es utilizado exclusivamente por el Auth Service.
-
-#### Descripción de los Estilos y Patrones Arquitectónicos Utilizados
-
-##### Estilos arquitectónicos
-
-- **Arquitectura de microservicios**  
-  El sistema está compuesto por múltiples servicios independientes con responsabilidades específicas.
-
-- **Arquitectura orientada a eventos (Event-Driven Architecture)**  
-  Se utiliza comunicación basada en eventos para permitir interacción asincrónica entre servicios.
-
-
-##### Patrones arquitectónicos
-
-- **API Gateway Pattern**  
-  Se utiliza un API Gateway como punto de entrada único al sistema.
-
-- **Message Broker Pattern**  
-  Se emplea un broker de mensajería (RabbitMQ) para gestionar eventos entre servicios.
-
-- **Database per Service Pattern**  
-  Cada microservicio posee su propia base de datos.
-
-- **Publish/Subscribe Pattern**  
-  Los servicios publican eventos y otros se suscriben para reaccionar.
-
----
-### Estructura de Despliegue
-
-#### Vista de Despliegue
-
-#### Descripción de elementos arquitectónicos y relaciones
-
-- **Frontend**  
-  Aplicación web que se ejecuta en un contenedor independiente. Se comunica con el sistema a través del API Gateway mediante HTTP.
-
-- **API Gateway (Nginx)**  
-  Actúa como punto de entrada único al sistema. Recibe las solicitudes del frontend y las redirige a los microservicios correspondientes.
-
-- **Auth Service**  
-  Servicio encargado de la autenticación. Se conecta a:
-  - su base de datos PostgreSQL  
-  - Redis para manejo de sesiones  
-  - RabbitMQ para publicación de eventos  
-
-- **User Service**  
-  Gestiona la información de usuarios. Se conecta a:
-  - su base de datos PostgreSQL  
-  - RabbitMQ para consumo de eventos  
-
-- **Product Service**  
-  Maneja el catálogo de productos y reseñas. Se conecta a:
-  - su base de datos PostgreSQL  
-  - otros servicios mediante HTTP
-
-- **Order Service**  
-  Gestiona la creación y consulta de órdenes. Se conecta a:
-  - su base de datos PostgreSQL  
-  - el Product Service mediante HTTP para validación de productos  
-  - RabbitMQ para publicación de eventos  
-
-- **AI Service**  
-  Consume eventos desde RabbitMQ para procesar información del sistema y generar funcionalidades inteligentes.
-
-- **RabbitMQ**  
-  Broker de mensajería que permite la comunicación asincrónica entre servicios mediante eventos.
-
-- **Redis**  
-  Sistema de almacenamiento en memoria utilizado por el Auth Service para la gestión de sesiones.
-
-- **Bases de datos PostgreSQL**  
-  Cada servicio (Auth, User, Product, Order) cuenta con su propia base de datos independiente, desplegada en contenedores separados.
-
-#### Descripción de patrones arquitectónicos utilizados
-
-- **Arquitectura basada en contenedores**  
-  Todos los componentes del sistema se despliegan como contenedores independientes, lo que facilita el aislamiento, portabilidad y escalabilidad.
-
-- **Microservices Deployment Pattern**  
-  Cada servicio es desplegado de forma independiente, permitiendo actualizaciones y escalado sin afectar a otros componentes.
-
-- **Database per Service**  
-  Cada microservicio tiene su propia base de datos, evitando el acoplamiento a nivel de persistencia.
-
-- **API Gateway Pattern**  
-  Se utiliza un gateway para centralizar el acceso a los servicios y simplificar la comunicación con el cliente.
-
-- **Message Broker Pattern**  
-  RabbitMQ permite la comunicación asincrónica entre servicios mediante eventos.
+**Estilos arquitectónicos:**
+- **Microservicios** — `auth-service`, `user-service`, `product-service` son desplegables independientes
+- **Layered Architecture** — cada servicio organiza código por capas: `presentation` (routers), `application` (services), `domain` (models/schemas), `infrastructure` (database/redis/events)
+- **API Gateway** — Nginx centraliza entrada y ruteo por dominio
+- **Patrones**: Service Layer, Dependency Injection, Observer/Event-Driven
 
 ---
 
-### Estructura en Capas
+## 📊 Estado de Implementación (Actual)
 
-#### Vista en Capas
+> Esta sección describe el estado real implementado hoy en el repositorio.
+> La visión ideal del proyecto se mantiene en las secciones anteriores.
 
-#### Descripción de elementos arquitectónicos y relaciones
+### ✅ Implementado
 
-El sistema se divide en las siguientes capas:
+- Autenticación con `auth-service`: registro, login, validación de token y logout.
+- Gestión de sesiones y blacklist de tokens con Redis en autenticación.
+- `user-service` para perfil de usuario y consumo por otros servicios.
+- `product-service` con catálogo, CRUD de productos, categorías, reseñas y galería de imágenes.
+- Enriquecimiento de respuesta de productos (categoría y seller) con caché en Redis.
+- Frontend React + Vite organizado por capas (`app`, `pages`, `widgets`, `shared`).
+- Orquestación por Docker Compose con servicios backend, bases de datos, Redis y RabbitMQ.
+- API Gateway (Nginx) para entrada unificada.
 
-- **Capa de Presentación (Presentation Layer)**  
-  Incluye el frontend web, encargado de la interacción con el usuario. Esta capa envía solicitudes al sistema a través del API Gateway y presenta los resultados.
+### 🟡 Parcial
 
-- **Capa de Entrada (API Gateway Layer)**  
-  Representada por el API Gateway, que actúa como intermediario entre el frontend y los microservicios. Se encarga del enrutamiento de solicitudes, ocultando la complejidad interna del sistema.
+- Validación de roles en todos los endpoints sensibles depende de claims consistentes en JWT.
+- Cobertura de pruebas automatizadas integral (e2e entre servicios) aún en consolidación.
 
-- **Capa de Aplicación / Lógica de Negocio (Application Layer)**  
-  Compuesta por los microservicios:
-  - Auth Service  
-  - User Service  
-  - Product Service  
-  - Order Service  
-  - AI Service  
-  Cada uno implementa lógica de negocio específica y opera de forma independiente.
+### ⏳ No implementado (respecto al ideal planteado)
 
-- **Capa de Integración (Integration Layer)**  
-  Incluye los mecanismos de comunicación entre servicios:
-  - Comunicación síncrona mediante HTTP (REST)  
-  - Comunicación asíncrona mediante eventos usando RabbitMQ  
-  Esta capa permite la interacción entre servicios sin acoplamiento directo.
-
-- **Capa de Datos (Data Layer)**  
-  Compuesta por:
-  - Bases de datos PostgreSQL independientes por servicio  
-  - Redis como almacenamiento en memoria para sesiones  
-  Cada microservicio accede únicamente a su propia fuente de datos.
-
-##### Relaciones entre capas
-
-- La capa de presentación se comunica exclusivamente con el API Gateway.
-- El API Gateway enruta las solicitudes hacia la capa de aplicación.
-- Los microservicios pueden comunicarse entre sí mediante HTTP cuando se requiere validación en tiempo real.
-- La comunicación asincrónica entre servicios se realiza mediante el broker de mensajería.
-- Cada servicio interactúa únicamente con su propia base de datos, evitando dependencias directas entre capas de datos.
-
-#### Descripción de patrones arquitectónicos utilizados
-
-- **Layered Architecture Pattern**  
-  El sistema organiza sus responsabilidades en capas bien definidas, facilitando la separación de preocupaciones.
-
-- **Separation of Concerns**  
-  Cada capa tiene una responsabilidad específica (presentación, lógica, integración, datos), reduciendo el acoplamiento.
-
-- **API Gateway Pattern**  
-  Actúa como punto de entrada, separando la capa de presentación de la lógica de negocio.
-
-- **Microservices Pattern**  
-  Cada componente de la capa de aplicación es un servicio independiente.
-
-- **Event-Driven Pattern**  
-  La capa de integración soporta comunicación basada en eventos para procesos asincrónicos.
-
-- **Database per Service Pattern**  
-  Cada servicio gestiona su propia persistencia dentro de la capa
+- Carrito de compras y checkout/pasarela de pagos.
+- Historial de compras y personalización basada en órdenes.
+- Recomendaciones con IA generativa en producción.
+- Asistente conversacional IA integrado en frontend/backend.
 
 ---
 
-### Estructura de Descomposición
+## 📐 Diagramas
 
-La descomposición del sistema se realizó basada en responsabilidades de negocio (business capabilities), donde cada microservicio encapsula un dominio funcional específico:
-- Autenticación → Auth Service  
-- Gestión de usuarios → User Service  
-- Catálogo de productos → Product Service  
-- Gestión de pedidos → Order Service  
-- Procesamiento inteligente → AI Service  
+Diagramas actualizados basados en la implementación existente:
 
-#### Vista de Descomposición
+- Componentes y Conectores (estado actual): [docs/architecture/Component_Connectors_Current.puml](docs/architecture/Component_Connectors_Current.puml)
+- Despliegue (estado actual): [docs/architecture/Deployment_Current.puml](docs/architecture/Deployment_Current.puml)
+- Presentación/Frontend (estado actual): [docs/architecture/Presentation_Current.puml](docs/architecture/Presentation_Current.puml)
+- Decomposición (estado actual): [docs/architecture/Decomposition_Current.puml](docs/architecture/Decomposition_Current.puml)
+- Organización por capas (guía): [docs/architecture/Layered_Organization_Guide.md](docs/architecture/Layered_Organization_Guide.md)
+- Vigencia de diagramas (actual/futuro/no vigente): [docs/architecture/Diagram_Status.md](docs/architecture/Diagram_Status.md)
 
-#### Descripción de elementos arquitectónicos y relaciones
+Diagramas de referencia previos y objetivo:
 
-El sistema está compuesto por los siguientes microservicios:
+- Objetivo Marketplace: [docs/architecture/Component_Marketplace_Target.puml](docs/architecture/Component_Marketplace_Target.puml)
+- C4 y artefactos previos: [docs/architecture/](docs/architecture/)
+- Workspace de arquitectura futura: [docs/future/README.md](docs/future/README.md)
+- Roadmap futuro por fases: [docs/future/roadmap/Future_Roadmap.md](docs/future/roadmap/Future_Roadmap.md)
+- Definicion de objetivo futuro: [docs/future/architecture/Future_System_Target.md](docs/future/architecture/Future_System_Target.md)
 
-- **Auth Service**  
-  Responsable de la autenticación y gestión de credenciales. Genera tokens JWT y publica eventos relacionados con el registro de usuarios.
+---
 
-- **User Service**  
-  Encargado de la gestión de perfiles de usuario. Consume eventos generados por el Auth Service (ej. `USER_REGISTERED`) para crear la información del usuario en su base de datos.
+## 🧭 Vistas Arquitectónicas
 
-- **Product Service**  
-  Gestiona el catálogo de productos y las reseñas. Permite la creación, consulta y administración de productos dentro del sistema.
+### Component-and Connector (C&C) Structure
 
-- **Order Service**  
-  Responsable de la gestión de pedidos. Coordina la creación de órdenes y se comunica con el Product Service para validar la información de productos.
+#### C&C View
 
-- **AI Service**  
-  Procesa eventos del sistema para generar funcionalidades inteligentes como recomendaciones y personalización.
+- Description of architectural elements and relations:
+  Frontend, API Gateway y microservicios de auth, user y product conectados por APIs REST; persistencia por servicio (PostgreSQL), Redis para sesión/caché y RabbitMQ para integración por eventos.
+- Description of architectural styles and patterns used:
+  Arquitectura de microservicios con API Gateway, estilo event-driven para comunicación asíncrona y patrones Service Layer + Dependency Injection.
+- Artifact:
+  [docs/architecture/Component_Connectors_Current.puml](docs/architecture/Component_Connectors_Current.puml)
 
+### Deployment Structure
 
-#### Relaciones entre los componentes
+#### Deployment View
 
-- El **Auth Service** publica eventos que son consumidos por el **User Service**.
-- El **Order Service** se comunica de forma síncrona con el **Product Service** para validar productos.
-- Los distintos servicios publican eventos en el broker de mensajería.
-- El **AI Service** consume eventos generados por múltiples servicios.
-- Todos los servicios son independientes y no comparten bases de datos.
-- La comunicación entre servicios puede ser:
-  - **Síncrona (HTTP/REST)**  
-  - **Asíncrona (eventos mediante RabbitMQ)**  
+- Description of architectural elements and relations:
+  Contenedores Docker para frontend, gateway Nginx, auth-service, user-service, product-service, PostgreSQL por dominio, Redis y RabbitMQ; exposición de puertos y dependencias coordinadas por Docker Compose.
+- Description of architectural patterns used:
+  Container-based deployment, base de datos por servicio y patrón edge gateway para entrada unificada.
+- Artifact:
+  [docs/architecture/Deployment_Current.puml](docs/architecture/Deployment_Current.puml)
+
+### Layered Structure
+
+#### Layered View
+
+- Description of architectural elements and relations:
+  En backend: presentation (routers) delega a application (services), que usa domain (models/schemas) e infrastructure (database, redis, events). En frontend: app coordina pages, pages componen widgets y widgets consumen shared.
+- Description of architectural patterns used:
+  Layered Architecture con separación de responsabilidades, flujo de dependencias de afuera hacia adentro y contratos explícitos entre capas.
+- Artifacts:
+  [docs/architecture/Presentation_Current.puml](docs/architecture/Presentation_Current.puml)
+  [docs/architecture/Layered_Organization_Guide.md](docs/architecture/Layered_Organization_Guide.md)
+
+### Decomposition Structure
+
+#### Decomposition View
+
+- Description of architectural elements and relations:
+  Descomposición por dominios y capacidades: auth-service (identidad y sesión), user-service (perfil), product-service (catálogo/reseñas/imágenes/categorías), frontend por módulos de interfaz y docs por artefactos arquitectónicos.
+- Description of architectural patterns used:
+  A nivel interno, cada servicio se divide en módulos de router, service, model y schema, con core para infraestructura compartida; a nivel de solución, los módulos interactúan mediante gateway, eventos y acceso controlado a datos.
+- Artifacts:
+  [docs/architecture/Decomposition_Current.puml](docs/architecture/Decomposition_Current.puml)
+  [docs/architecture/](docs/architecture/)
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+ecommerce-project/
+│
+├── README.md
+├── LICENSE
+├── .env.example
+├── docker-compose.yml
+│
+├── .github/
+│   ├── agents/
+│   └── workflows/
+│       ├── lint.yml
+│       ├── test.yml
+│       └── docker.yml
+│
+├── backend/
+│   ├── auth_service/
+│   │   └── src/
+│   │       ├── routers/        # presentation
+│   │       ├── services/       # application
+│   │       ├── models/         # domain
+│   │       ├── schemas/        # domain contracts
+│   │       └── core/           # infrastructure/config
+│   ├── user-service/
+│   │   └── src/
+│   │       ├── routers/
+│   │       ├── services/
+│   │       ├── models/
+│   │       ├── schemas/
+│   │       └── core/
+│   └── product_service/
+│       ├── routers/
+│       ├── services/
+│       ├── models/
+│       ├── schemas/
+│       └── core/
+│
+├── frontend/
+│   ├── Dockerfile
+│   ├── .dockerignore
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   └── src/
+│       ├── app/                # root routes + shell composition
+│       ├── pages/              # route-level screens
+│       ├── widgets/            # reusable composed UI blocks
+│       ├── shared/             # config, libs, helpers
+│       ├── assets/
+│       └── main.jsx
+│
+└── docs/
+  ├── entrega1.md
+  ├── architecture/
+  └── exports/
+```
+
 ---
 
 ## 🚀 Inicio Rápido
@@ -313,18 +279,22 @@ cp .env.example .env
 docker compose up --build
 
 # 4. Acceder a la aplicación
-# API backend:                http://localhost:8000
-# API backend (Swagger):      http://localhost:8000/docs
-# API Health                  http://localhost:8000/health
+# Frontend:                   http://localhost:3000
+# API Gateway:                http://localhost:8000
+# API Gateway Health          http://localhost:8000/health
 ```
 
 **Servicios levantados:**
 
 | Servicio | Puerto | Descripción |
 |---|---|---|
-| `backend` | 8000 | API FastAPI |
-| `postgres` | 5432 | PostgreSQL 15 |
-| `redis` | 6379 | Redis — caché NoSQL |
+| `frontend` | 3000 | React + Vite |
+| `api-gateway` | 8000 | Nginx reverse proxy |
+| `auth-service` | 8001 | API de autenticación |
+| `user-service` | 8002 | API de usuarios |
+| `auth-postgres` | 5433 | PostgreSQL auth-service |
+| `user-postgres` | 5432 | PostgreSQL user-service |
+| `rabbitmq` | 5672/15672 | Broker de eventos + panel |
 
 ```bash
 # Para detener
@@ -429,88 +399,58 @@ npm run dev -- --host 0.0.0.0 --port 3000
 
 ## 📋 Requerimientos
 
-Los siguientes requerimientos funcionales definen el dominio y el alcance del sistema:
+### Requerimientos Funcionales
 
 | ID | Descripción |
 |---|---|
-| RF-01 | El sistema debe permitir el registro de nuevos usuarios, inicio de sesión y gestión de perfiles individuales. |
-| RF-02 | El sistema debe almacenar el historial de compras y las interacciones de los usuarios con los productos, incluyendo acciones como la visualización y la adquisición de productos. |
-| RF-03 | El sistema debe permitir a los usuarios visualizar el catálogo completo de productos disponibles en la plataforma. |
-| RF-04 | El sistema debe permitir a los usuarios gestionar su carrito de compras, incluyendo agregar productos, eliminar productos y modificar la cantidad de unidades antes de realizar la compra. |
-| RF-05 | El sistema debe generar recomendaciones de productos personalizadas utilizando un sistema de inteligencia artificial que analice el historial de compras y las interacciones de los usuarios con los productos. |
-| RF-06 | El sistema debe permitir a los usuarios publicar reseñas y calificaciones sobre los productos que hayan adquirido. |
-| RF-07 | El sistema debe exponer un asistente conversacional de IA generativa que ayude al usuario a encontrar productos, resolver dudas y recibir recomendaciones en lenguaje natural. |
-| RF-08 | El sistema debe permitir a los usuarios registrar y publicar productos dentro del catálogo de la plataforma, asignándolos a una categoría específica para su comercialización. |
-| RF-09 | El sistema debe permitir a los usuarios visualizar las estadísticas de ventas realizadas, incluyendo información como número de productos vendidos, ingresos generados y productos más vendidos. |
-| RF-10 | El sistema debe permitir a los usuarios completar el proceso de checkout para finalizar la compra de los productos seleccionados, ingresando la información de envío y seleccionando un método de pago disponible. |
-| RF-11 | El sistema debe permitir a los usuarios buscar productos por nombre o categoría y aplicar filtros para refinar los resultados de búsqueda. |
-| RF-12 | El sistema debe permitir la clasificación de productos en categorías para facilitar su organización y búsqueda dentro del catálogo. |
-
----
+| RF-01 | Registro de usuarios, inicio de sesión y gestión de perfiles |
+| RF-02 | Historial de compras y preferencias para personalización |
+| RF-03 | Catálogo con búsqueda por nombre/categoría y filtros |
+| RF-04 | Carrito de compras y proceso de checkout |
+| RF-05 | Recomendaciones de productos mediante IA generativa |
+| RF-06 | Reseñas y calificaciones de productos |
+| RF-07 | Asistente conversacional IA para encontrar productos y recibir recomendaciones |
 
 ### Requerimientos No Funcionales
 
-| ID | Descripción | Criterio de verificación |
+| ID | Descripción | Solución |
 |---|---|---|
-| RNF-01 | **Disponibilidad:** El sistema debe garantizar la continuidad de las funcionalidades principales ante fallos de componentes no críticos. | El sistema continúa permitiendo operaciones principales (navegación de catálogo, carrito y checkout) cuando un componente no crítico falla. |
-| RNF-02 | **Arquitectura modular:** El sistema debe estar diseñado de manera modular, permitiendo la independencia y desacoplamiento de sus componentes. | Los componentes del sistema pueden ser desarrollados, desplegados y mantenidos de manera independiente sin afectar el funcionamiento global. |
-| RNF-03 | **Integración de IA generativa:** El sistema debe integrar servicios de inteligencia artificial para funcionalidades como recomendaciones, búsqueda inteligente y asistencia conversacional. | El sistema genera recomendaciones y respuestas en lenguaje natural basadas en el contexto del usuario. |
-| RNF-04 | **Despliegue:** El sistema debe permitir su despliegue de manera reproducible mediante un proceso automatizado. | El sistema puede ser desplegado en un entorno limpio siguiendo un procedimiento estandarizado sin configuraciones manuales complejas. |
-| RNF-05 | **Seguridad:** El sistema debe garantizar la protección de los datos de los usuarios mediante mecanismos de autenticación y control de acceso. | Solo usuarios autenticados pueden acceder a funcionalidades protegidas del sistema y a sus datos asociados. |
+| RNF-01 | Disponibilidad — arquitectura resiliente a fallos | Microservicios independientes en contenedores |
+| RNF-02 | Separación de responsabilidades por dominio | `core-service` y `ai-service` — dominios aislados |
+| RNF-03 | IA generativa vía API externa sin entrenamiento propio | Google Gemini Flash API |
+| RNF-04 | Catálogo categorizado | Tabla `categories` en PostgreSQL + filtros en frontend |
+| RNF-05 | Despliegue local con un solo comando | `docker compose up --build` |
+| RNF-06 | Al menos dos lenguajes de programación | Python 3.12 (FastAPI) + TypeScript (Next.js 14) |
 
-### Requerimientos del Curso 
+### ✅ Cobertura de Requerimientos — Primera Entrega
 
-| ID | Requerimiento |
-|---|---|
-| C-RNF-01 | El sistema debe seguir una arquitectura distribuida |
-| C-RNF-02 | El sistema debe incluir al menos dos componentes de presentación (uno de ellos: frontend web) |
-| C-RNF-03 | El frontend web debe seguir una subarquitectura SSR (Server-Side Rendering) |
-| C-RNF-04 | El sistema debe incluir al menos cuatro componentes de lógica |
-| C-RNF-05 | El sistema debe incluir al menos un componente que permita la comunicación/orquestación entre los componentes de lógica |
-| C-RNF-06 | El sistema debe incluir al menos cuatro componentes de datos (incluyendo bases de datos relacionales y NoSQL) |
-| C-RNF-07 | El sistema debe incluir al menos un componente encargado de manejar procesos asincrónicos |
-| C-RNF-08 | El sistema debe incluir un conjunto de conectores basados en HTTP |
-| C-RNF-09 | El sistema debe estar construido usando al menos cuatro lenguajes de programación |
-| C-RNF-10 | El despliegue del sistema debe ser orientado a contenedores |
+#### Funcionales (RF)
+
+| ID | Estado en Entrega 1 | Evidencia resumida |
+|---|---|---|
+| RF-01 | ✅ Implementado | Registro e inicio de sesión con JWT en backend y formularios de login/register en frontend |
+| RF-02 | ⏳ Pendiente | No se implementa historial de compras ni preferencias en esta entrega |
+| RF-03 | ✅ Implementado | Catálogo con búsqueda y filtros por categoría |
+| RF-04 | ⏳ Pendiente | Carrito y checkout no incluidos en esta fase |
+| RF-05 | ⏳ Pendiente | Recomendaciones IA no implementadas en el MVP actual |
+| RF-06 | ⏳ Pendiente | Reseñas y calificaciones no incluidas en esta fase |
+| RF-07 | ⏳ Pendiente | Asistente conversacional IA no implementado aún |
+
+#### No Funcionales (RNF)
+
+| ID | Estado en Entrega 1 | Evidencia resumida |
+|---|---|---|
+| RNF-01 | 🟡 Parcial | Arquitectura por servicios con contenedores (backend, postgres, redis); faltan escenarios avanzados de resiliencia |
+| RNF-02 | ✅ Implementado | Separación por capas y dominios en backend (routers, services, schemas, models) |
+| RNF-03 | ⏳ Pendiente | Integración productiva de IA generativa no habilitada en esta entrega |
+| RNF-04 | ✅ Implementado | Modelo de categorías + endpoints y filtro en frontend |
+| RNF-05 | ✅ Implementado | Arranque local con `docker compose up --build` |
+| RNF-06 | ✅ Implementado | Backend en Python y frontend en JavaScript |
+
+> Nota: Esta tabla refleja el alcance real del MVP en la primera entrega y sirve como línea base para las siguientes iteraciones.
 
 ---
-#### Flujo cubierto:
 
-1. **Autenticación de usuario**  
-   - El usuario inicia sesión a través del API Gateway  
-   - El servicio de autenticación valida las credenciales contra su base de datos  
-   - Se genera un **JWT** y se almacena en Redis  
-   - El token es utilizado para autorizar futuras solicitudes a otros servicios  
-
-2. **Gestión de usuarios**  
-   - El usuario se registra a través del sistema de autenticación  
-   - El servicio de autenticación crea las credenciales del usuario  
-   - Se publica un evento en el broker de mensajería  
-   - El servicio de usuarios consume este evento y crea el perfil del usuario en su base de datos  
-   - La información del usuario se almacena en PostgreSQL (base de datos propia del servicio)   
-
-3. **Gestión de catálogo de productos**  
-   - El usuario autenticado accede al catálogo mediante el API Gateway  
-   - El servicio de productos valida el JWT antes de procesar la solicitud  
-   - Se permite la creación y consulta de productos  
-   - Los productos se almacenan en su base de datos correspondiente  
-
-4. **Publicación de reseñas de productos**  
-   - Los usuarios autenticados pueden publicar reseñas sobre productos existentes  
-   - El servicio de productos gestiona la creación y almacenamiento de reseñas  
-   - Esta funcionalidad permite incorporar interacción entre usuarios dentro del sistema  
-
-5. **Procesamiento inteligente (AI Service)**  
-
-
-6. **Comunicación asincrónica basada en eventos**  
-   - Los servicios publican eventos en un broker (RabbitMQ) ante acciones relevantes  
-   - Otros servicios se suscriben a estos eventos y reaccionan de forma desacoplada  
-   - Este mecanismo permite:
-     - escalabilidad  
-     - independencia entre servicios  
-     - extensión futura del sistema  
----
 ## 🤝 Contribución
 
 ### 📌 Estrategia de Ramas (Git Flow Simplificado)
@@ -798,14 +738,12 @@ Si falla:
 
 **Proyecto Académico — Arquisoft 2026**
 
-**Nombre:** Grupo D
-
-| # | Nombre completo |
+| # | Nombre Completo |
 |---|---|
 | 1 | Sara Isabel Ospina Valderrama |
-| 2 | Andrés Felipe Perdomo Uruburu |
-| 3 | Juan David Castañeda Cárdenas |
-| 4 | John Alejandro Pastor Sandoval |
+| 2 | Juan David Castañeda Cárdenas |
+| 3 | John Alejandro Pastor Sandoval |
+| 4 | Andrés Felipe Perdomo Uruburu |
 
 ---
 
@@ -814,6 +752,19 @@ Si falla:
 - **[docs/entrega1.md](docs/entrega1.md)**: Documento de primera entrega — requisitos y arquitectura completa
 - **[docs/architecture/](docs/architecture/)**: Diagramas C4 (PlantUML) y vista C&C
 - **API Docs (local)**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+## 📊 Estado del Proyecto
+
+| Componente | Estado |
+|---|---|
+| CI/CD Pipeline | ![passing](https://img.shields.io/badge/status-en%20progreso-yellow) |
+| core-service | ![wip](https://img.shields.io/badge/status-en%20progreso-yellow) |
+| ai-service | ![wip](https://img.shields.io/badge/status-en%20progreso-yellow) |
+| Frontend | ![wip](https://img.shields.io/badge/status-en%20progreso-yellow) |
+| Diagramas arquitectónicos | ![done](https://img.shields.io/badge/status-completado-brightgreen) |
+| Documento entrega1 | ![done](https://img.shields.io/badge/status-completado-brightgreen) |
 
 ---
 

@@ -1,0 +1,158 @@
+@startuml Component_Connectors_Current
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam Padding 7
+skinparam roundcorner 8
+skinparam ArrowColor #64748B
+skinparam ArrowFontColor #475569
+skinparam ArrowFontSize 9
+skinparam ArrowThickness 2
+skinparam NoteBackgroundColor #FFFBEB
+skinparam NoteBorderColor #F59E0B
+skinparam NoteFontSize 9
+
+' ─── Estilos por tipo ───────────────────────────────────
+
+skinparam component {
+  BackgroundColor #DBEAFE
+  BorderColor     #1D4ED8
+  FontColor       #1E3A8A
+  FontSize        10
+}
+skinparam component<<ui>> {
+  BackgroundColor #EDE9FE
+  BorderColor     #7C3AED
+  FontColor       #4C1D95
+}
+skinparam component<<gw>> {
+  BackgroundColor #E2E8F0
+  BorderColor     #334155
+  FontColor       #1E293B
+}
+skinparam component<<ai>> {
+  BackgroundColor #EDE9FE
+  BorderColor     #7C3AED
+  FontColor       #4C1D95
+}
+
+skinparam database {
+  BackgroundColor #BBF7D0
+  BorderColor     #16A34A
+  FontColor       #14532D
+  FontSize        10
+}
+skinparam database<<cache>> {
+  BackgroundColor #FED7AA
+  BorderColor     #EA580C
+  FontColor       #9A3412
+}
+
+skinparam queue {
+  BackgroundColor #FDE68A
+  BorderColor     #D97706
+  FontColor       #78350F
+  FontSize        10
+}
+
+skinparam package {
+  BackgroundColor #F8FAFF
+  BorderColor     #CBD5E0
+  FontColor       #374151
+}
+skinparam package<<pres>> {
+  BackgroundColor #F5F3FF
+  BorderColor     #C4B5FD
+  FontColor       #5B21B6
+}
+skinparam package<<data>> {
+  BackgroundColor #F0FDF4
+  BorderColor     #86EFAC
+  FontColor       #166534
+}
+
+top to bottom direction
+
+title <size:15>Vista de Componentes y Conectores</size>\n<size:10><color:#6B7280>AICart - Estado actual implementado - Mayo 2026</color></size>
+
+' ─── ACTOR ──────────────────────────────────────────────
+actor "Usuario" as User
+
+' ─── PRESENTACION ───────────────────────────────────────
+package "Presentacion" <<pres>> {
+  component "<b>Frontend</b>\nNext.js 14 - App Router\nSSR - JWT Cookie - :3000" as Frontend <<ui>>
+}
+
+' ─── GATEWAY ────────────────────────────────────────────
+package "Gateway" as GatewayPkg {
+  component "<b>API Gateway</b>\nNginx 1.27 - CORS - Routing\n:8000" as Gateway <<gw>>
+}
+
+note as NoteGW #FEF9C3
+  <color:#92400E>CORS wildcard activo
+  /internal/ expuesto</color>
+end note
+NoteGW .. Gateway
+
+' ─── MICROSERVICIOS ─────────────────────────────────────
+package "Microservicios" #EFF6FF {
+  component "<b>auth-service</b>\nFastAPI - asyncpg\nJWT HS256 - bcrypt - :8001" as Auth
+  component "<b>user-service</b>\nFastAPI - psycopg2\nPerfiles - Direcciones - :8002" as UserSvc
+  component "<b>product-service</b>\nFastAPI - asyncpg\nCQRS - Cache-Aside - :8003" as Product
+  component "<b>order-service</b>\nFastAPI - asyncpg\nSaga - Pessimistic Lock - :8004" as Order
+  component "<b>ai-service</b>\nFastAPI - Groq LLM\nRAG parcial - :8005" as AI <<ai>>
+}
+
+' ─── DATOS ──────────────────────────────────────────────
+package "Capa de Datos" <<data>> {
+  database "<b>auth-postgres</b>\nPostgreSQL 16\nusers - audit_log - :5433" as AuthDB
+  database "<b>user-postgres</b>\nPostgreSQL 16\nprofiles - addresses - :5432" as UserDB
+  database "<b>order-postgres</b>\nPostgreSQL 16\norders - order_items - :5434" as OrderDB
+  database "<b>Redis 7</b>\nSessions - Blacklist - Cache\n:6379" as Redis <<cache>>
+  queue "<b>RabbitMQ 3</b>\nFanout Exchange - Durable\n:5672" as MQ
+}
+
+' ─── CONECTORES ─────────────────────────────────────────
+
+User         -[#7C3AED]->       Frontend  : HTTP
+
+Frontend     -[#334155]->       Gateway   : REST / JSON
+
+Gateway      -->                Auth      : /auth/*
+Gateway      -->                UserSvc   : /users/*
+Gateway      -->                Product   : /products/*
+Gateway      -->                Order     : /orders/*
+Gateway      -->                AI        : /ai/*
+
+Auth         -[#16A34A]->       AuthDB    : SQL asyncpg
+Auth         -[#EA580C]->       Redis     : session + blacklist
+Auth         -[#D97706,dashed]-> MQ       : <<publish>> AUTH_USER_REGISTERED
+
+UserSvc      -[#16A34A]->       UserDB    : SQL psycopg2
+MQ           -[#D97706,dashed]-> UserSvc  : <<consume>> AUTH_USER_REGISTERED
+
+Product      -[#DC2626]->       UserDB    : SQL asyncpg - BD compartida
+Product      -[#EA580C]->       Redis     : cache TTL 900s
+Product      -[dashed]->        UserSvc   : GET /users/{id} - 2.5s
+
+Order        -[#16A34A]->       OrderDB   : SQL asyncpg
+Order        -[#1D4ED8]->       Product   : /internal/products/*\nreserve - release - stock - 10s
+Order        -[#D97706,dashed]-> MQ       : <<publish>> ORDER_CREATED - CANCELLED
+
+AI           -[#1D4ED8]->       Product   : GET /products/search - 10s
+
+' ─── LEYENDA ────────────────────────────────────────────
+legend bottom
+  |= Conector            |= Descripcion                   |
+  | flecha solida         | HTTP sincrono REST              |
+  | flecha punteada       | Asincrono RabbitMQ AMQP         |
+  | <color:#DC2626>flecha roja</color>   | Problema critico en el sistema  |
+  | <back:#DBEAFE>   </back> | Microservicio de negocio FastAPI |
+  | <back:#EDE9FE>   </back> | Frontend / AI (capa purple)     |
+  | <back:#BBF7D0>   </back> | Base de datos PostgreSQL        |
+  | <back:#FED7AA>   </back> | Cache Redis                     |
+  | <back:#FDE68A>   </back> | Broker RabbitMQ                 |
+endlegend
+
+@enduml
