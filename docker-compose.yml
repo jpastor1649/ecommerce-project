@@ -169,6 +169,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://product_user:product_password@product-postgres:5432/product_db}
       APP_NAME: ${PRODUCT_APP_NAME:-Product Service}
@@ -177,6 +179,7 @@ services:
       JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL:-http://user-service:8000}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
     command: uvicorn product_service.main:app --host 0.0.0.0 --port 8003
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=3)\""]
@@ -263,15 +266,15 @@ services:
     restart: unless-stopped
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
       user-service:
-        condition: service_started
+        condition: service_healthy
       product-service:
-        condition: service_started
+        condition: service_healthy
       order-service:
-        condition: service_started
+        condition: service_healthy
       ai-service:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${API_GATEWAY_EXTERNAL_PORT:-8000}:8000"
     volumes:
