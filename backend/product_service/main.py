@@ -16,6 +16,7 @@ from product_service.src.core.redis_client import get_redis_client
 from product_service.src.services.product_service import get_http_client
 from product_service.src.core.seeds import seed_initial_data
 from product_service.src.models.base import Base
+from product_service.src.models.product import Product, Category  
 from product_service.src.routers.internal_inventory import router as internal_inventory_router
 from product_service.src.routers.products import router as products_router
 
