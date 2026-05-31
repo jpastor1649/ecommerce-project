@@ -33,7 +33,7 @@ class EventPublisher:
                 )
             )
             self.channel = self.connection.channel()
-            self.channel.exchange_declare(exchange=self.exchange, exchange_type="fanout", durable=True)
+            self.channel.exchange_declare(exchange=self.exchange, exchange_type="fanout")
             self.channel.exchange_declare(exchange=self._saga_exchange, exchange_type="topic", durable=True)
 
             # DLX declarado pero sin lógica de inspección
