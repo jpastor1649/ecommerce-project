@@ -35,6 +35,24 @@ services:
       timeout: 5s
       retries: 5
 
+  product-postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce_product_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PRODUCT_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PRODUCT_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${PRODUCT_POSTGRES_DB}
+    ports:
+      - "${PRODUCT_POSTGRES_EXTERNAL_PORT:-5435}:5432"
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_POSTGRES_USER} -d ${PRODUCT_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   order-postgres:
     image: postgres:16-alpine
     container_name: ecommerce_order_postgres
@@ -104,7 +122,7 @@ services:
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-    command: uvicorn auth_service.src.main:app --host 0.0.0.0 --port 8001
+    command: uvicorn auth_service.main:app --host 0.0.0.0 --port 8001
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)\""]
       interval: 10s
@@ -147,18 +165,21 @@ services:
     container_name: ecommerce_product_service
     restart: unless-stopped
     depends_on:
-      user-postgres:
+      product-postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
-      DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://user_user:user_password@user-postgres:5432/user_db}
+      DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://product_user:product_password@product-postgres:5432/product_db}
       APP_NAME: ${PRODUCT_APP_NAME:-Product Service}
       DEBUG: ${PRODUCT_DEBUG:-false}
       JWT_SECRET: ${AUTH_JWT_SECRET}
       JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL:-http://user-service:8000}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
     command: uvicorn product_service.main:app --host 0.0.0.0 --port 8003
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=3)\""]
@@ -217,6 +238,18 @@ services:
       AI_MODEL: ${AI_MODEL:-llama-3.1-8b-instant}
       AI_ALLOWED_ORIGINS: ${AI_ALLOWED_ORIGINS:-http://localhost:3000}
       AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-30}
+      PRODUCT_SERVICE_URL: ${PRODUCT_SERVICE_URL:-http://product-service:8003}
+      PRODUCT_SERVICE_TIMEOUT_SECONDS: ${PRODUCT_SERVICE_TIMEOUT_SECONDS:-10}
+      USER_SERVICE_URL: ${USER_SERVICE_URL:-http://user-service:8000}
+      ORDER_SERVICE_URL: ${ORDER_SERVICE_URL:-http://order-service:8004}
+      REDIS_URL: ${AI_REDIS_URL:-redis://redis:6379/1}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      product-service:
+        condition: service_started
+      redis:
+        condition: service_started
     command: uvicorn AI_service.main:app --host 0.0.0.0 --port 8005
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8005/health', timeout=3)\""]
@@ -233,15 +266,15 @@ services:
     restart: unless-stopped
     depends_on:
       auth-service:
-        condition: service_started
+        condition: service_healthy
       user-service:
-        condition: service_started
+        condition: service_healthy
       product-service:
-        condition: service_started
+        condition: service_healthy
       order-service:
-        condition: service_started
+        condition: service_healthy
       ai-service:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${API_GATEWAY_EXTERNAL_PORT:-8000}:8000"
     volumes:
@@ -261,7 +294,6 @@ services:
       api-gateway:
         condition: service_started
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       API_SERVER_URL: http://api-gateway:8000
     ports:
@@ -270,4 +302,5 @@ services:
 volumes:
   auth_postgres_data:
   user_postgres_data:
+  product_postgres_data:
   order_postgres_data:

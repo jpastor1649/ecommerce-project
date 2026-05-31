@@ -29,7 +29,7 @@ app.include_router(chat_router, prefix=settings.api_v1_prefix)
 
 @app.get("/docs", include_in_schema=False)
 async def docs_redirect():
-    return RedirectResponse(url=f"{settings.API_V1_STR}/docs")
+    return RedirectResponse(url=f"{settings.api_v1_prefix}/docs")
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:

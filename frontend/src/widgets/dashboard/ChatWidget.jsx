@@ -1,20 +1,66 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { API_BASE_URL } from '../../shared/config/api'
-import { getAuthHeaders } from '../../shared/lib/auth'
+import { getAuthHeaders, getAuthToken } from '../../shared/lib/auth'
 import './ChatWidget.css'
+
+const INITIAL_MESSAGE = { role: 'ai', text: 'Hola! Soy tu asistente de AICart. Puedo ayudarte a encontrar productos. Preguntame lo que quieras!' }
+
+function getStorageKey() {
+  try {
+    const token = getAuthToken()
+    if (!token) return null
+    // Decode JWT payload (base64) to get user id — no signature verification needed here
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return `ai_chat:${payload.sub || 'anon'}`
+  } catch {
+    return null
+  }
+}
+
+function loadHistory() {
+  try {
+    const key = getStorageKey()
+    if (!key) return [INITIAL_MESSAGE]
+    const raw = localStorage.getItem(key)
+    if (!raw) return [INITIAL_MESSAGE]
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [INITIAL_MESSAGE]
+  } catch {
+    return [INITIAL_MESSAGE]
+  }
+}
+
+function saveHistory(messages) {
+  try {
+    const key = getStorageKey()
+    if (!key) return
+    localStorage.setItem(key, JSON.stringify(messages))
+  } catch {
+    // localStorage may be unavailable (private mode, storage full)
+  }
+}
+
+function clearHistory() {
+  try {
+    const key = getStorageKey()
+    if (key) localStorage.removeItem(key)
+  } catch {}
+}
 
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState([
-    { role: 'ai', text: 'Hola! Soy tu asistente de AICart. Puedo ayudarte a encontrar productos. Preguntame lo que quieras!' }
-  ])
+  const [messages, setMessages] = useState(loadHistory)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  useEffect(() => {
+    saveHistory(messages)
   }, [messages])
 
   const sendMessage = async () => {
@@ -41,6 +87,23 @@ export default function ChatWidget() {
     }
   }
 
+  const handleClear = async () => {
+    setLoading(true)
+    try {
+      await fetch(`${API_BASE_URL}/ai/chat/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ message: '', clear_history: true }),
+      })
+    } catch {
+      // Silent — still clear locally
+    } finally {
+      clearHistory()
+      setMessages([INITIAL_MESSAGE])
+      setLoading(false)
+    }
+  }
+
   const handleKey = (e) => {
     if (e.key === 'Enter') sendMessage()
   }
@@ -51,6 +114,14 @@ export default function ChatWidget() {
         <div className="chat-box">
           <div className="chat-header">
             🤖 Asistente AICart
+            <button
+              className="chat-clear-btn"
+              onClick={handleClear}
+              disabled={loading}
+              title="Limpiar conversación"
+            >
+              🗑
+            </button>
           </div>
           <div className="chat-messages">
             {messages.map((msg, i) => (

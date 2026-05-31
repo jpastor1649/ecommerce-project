@@ -1,13 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
 
-# PostgreSQL Connection
-DATABASE_URL = os.getenv("DATABASE_URL")
+from .config.settings import settings
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable is required")
-
-engine = create_engine(DATABASE_URL)
+engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()

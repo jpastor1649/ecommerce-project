@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -13,6 +13,7 @@ from order_service.src.schemas.orders import (
     SellerSalesListResponse,
     OrderStatusUpdate,
 )
+from order_service.src.schemas.events import build_envelope
 from order_service.src.services.order_service import (
     create_order,
     get_order,
@@ -20,8 +21,13 @@ from order_service.src.services.order_service import (
     list_seller_sales,
     cancel_order,
     update_order_status,
+    _order_to_dict,
 )
 from order_service.src.services.product_client import get_my_seller_products
+from order_service.src.events.publisher import event_publisher
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -30,20 +36,62 @@ def _extract_token(request: Request) -> str:
     return request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
 
 
+def _extract_correlation_id(request: Request) -> str:
+    return request.headers.get("X-Request-ID", "") or request.headers.get("X-Correlation-ID", "")
+
+
 @router.post(
     "/",
     response_model=OrderResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new order",
-    description="Validates stock, creates order, reserves inventory, emits ORDER_CREATED event.",
+    description="Creates order in PENDING_STOCK_CONFIRMATION state and emits ORDER_CREATED saga event.",
 )
 async def create_order_endpoint(
     payload: OrderCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_order(db, current_user.id, payload, _extract_token(request))
+    order = await create_order(db, current_user.id, payload)
+    correlation_id = _extract_correlation_id(request) or str(order.saga_id)
+
+    order_dict = _order_to_dict(order)
+
+    def publish_order_created():
+        # Broadcast to fanout `events` exchange (for AI service, notifications)
+        published = event_publisher.publish("ORDER_CREATED", order_dict)
+        if not published:
+            logger.warning("ORDER_CREATED fanout event failed for order_id=%s", order.id)
+
+        # Saga routing to `commerce.saga` topic exchange
+        envelope = build_envelope(
+            "ORDER_CREATED",
+            {
+                "order_id": str(order.id),
+                "user_id": str(order.user_id),
+                "saga_id": str(order.saga_id),
+                "items": [
+                    {
+                        "product_id": str(item["product_id"]),
+                        "quantity": item["quantity"],
+                        "unit_price": item["price"],
+                        "product_name": item.get("product_name"),
+                    }
+                    for item in order_dict["items"]
+                ],
+                "total": order_dict["total_amount"],
+            },
+            correlation_id,
+        )
+        published = event_publisher.publish_saga("order.created", envelope)
+        if not published:
+            logger.warning("ORDER_CREATED saga event failed for order_id=%s", order.id)
+
+    background_tasks.add_task(publish_order_created)
+
+    return order
 
 
 @router.get(
@@ -98,15 +146,43 @@ async def get_order_endpoint(
     "/{order_id}/cancel",
     response_model=OrderResponse,
     summary="Cancel an order",
-    description="Allowed only for pending/paid orders. Releases stock and emits ORDER_CANCELLED event.",
+    description="Allowed for pending/confirmed orders. Emits ORDER_CANCELLED saga event.",
 )
 async def cancel_order_endpoint(
     order_id: UUID,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await cancel_order(db, order_id, current_user.id, _extract_token(request))
+    order = await cancel_order(db, order_id, current_user.id)
+    correlation_id = _extract_correlation_id(request) or str(order.saga_id or order.id)
+
+    order_dict = _order_to_dict(order)
+
+    def publish_order_cancelled():
+        # Broadcast to fanout `events` exchange
+        published = event_publisher.publish("ORDER_CANCELLED", order_dict)
+        if not published:
+            logger.warning("ORDER_CANCELLED fanout event failed for order_id=%s", order.id)
+
+        # Saga routing — product_service will release stock if reservation_id is set
+        envelope = build_envelope(
+            "ORDER_CANCELLED",
+            {
+                "order_id": str(order.id),
+                "reason": "user_cancelled",
+                "reservation_id": str(order.reservation_id) if order.reservation_id else None,
+            },
+            correlation_id,
+        )
+        published = event_publisher.publish_saga("order.cancelled", envelope)
+        if not published:
+            logger.warning("ORDER_CANCELLED saga event failed for order_id=%s", order.id)
+
+    background_tasks.add_task(publish_order_cancelled)
+
+    return order
 
 
 @router.put(

@@ -52,6 +52,26 @@
   gap: 8px;
 }
 
+.chat-clear-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.chat-clear-btn:hover {
+  color: white;
+}
+
+.chat-clear-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .chat-messages {
   flex: 1;
   height: 280px;

@@ -1,91 +1,184 @@
-import os
-from groq import Groq
-from dotenv import load_dotenv
-from typing import List, Dict, Any
-import re
+"""AI service: grounds the LLM response on real product-service data with memory and user context."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import uuid
+from typing import Any
+
+from groq import AsyncGroq
+
 from ..core.config import settings
-load_dotenv()
+from . import conversation_memory, price_extractor, product_client, user_context
+
+logger = logging.getLogger(__name__)
+
+
+SYSTEM_PROMPT = (
+    "Eres un asistente virtual personalizado para un e-commerce. "
+    "Tus reglas son:\n"
+    "1. SOLO recomiendas productos que aparezcan en el bloque 'Productos disponibles'.\n"
+    "2. SIEMPRE respetas el presupuesto del usuario. Si menciona 'barato', 'económico' o un precio máximo, "
+    "NUNCA recomiendes productos que superen ese precio. "
+    "Si no hay productos en ese rango, dilo claramente y sugiere ampliar el presupuesto.\n"
+    "3. Usa el historial de conversación para entender el contexto (colores, categorías, usos mencionados antes).\n"
+    "4. Si conoces el nombre del usuario, úsalo. Si conoces sus compras previas, tenlas en cuenta.\n"
+    "5. Sé breve y amable. Recomienda máximo 3 productos por respuesta.\n"
+    "6. NUNCA inventes nombres, precios, descripciones ni stock."
+)
+
 
 class AiService:
-    def __init__(self, product_service=None):   # ← recibe el servicio de productos
+    def __init__(self) -> None:
         api_key = settings.resolved_api_key
         if not api_key:
-            raise ValueError("GROQ_API_KEY no encontrada")
-        self.client = Groq(api_key=api_key)
-        self.model = "llama-3.1-8b-instant"
-        self.product_service = product_service   # ← para consultar productos
-        self.system_prompt = (
-            "Eres un asistente virtual para un e-commerce. "
-            "Tienes acceso a la lista de productos reales de la tienda. "
-            "Cuando te pregunten por productos, busca en la información que se te provee "
-            "y responde con detalles como nombre, precio, disponibilidad y descripción. "
-            "Responde en el mismo idioma del usuario, sé breve y amable."
+            raise ValueError("AI_API_KEY / GROQ_API_KEY no encontrada")
+        self.client = AsyncGroq(api_key=api_key)
+        self.model = settings.ai_model
+
+    @staticmethod
+    def _build_search_query(user_message: str) -> str:
+        return (user_message or "").strip()[:100]
+
+    @staticmethod
+    def _format_products(products: list[dict[str, Any]]) -> str:
+        if not products:
+            return ""
+        lines: list[str] = []
+        for product in products:
+            name = product.get("name") or "(sin nombre)"
+            price = product.get("price")
+            stock = product.get("stock")
+            description = (product.get("description") or "").strip()
+            if len(description) > 140:
+                description = description[:137] + "..."
+            details = [f"- {name}"]
+            if price is not None:
+                details.append(f"precio: ${price}")
+            if stock is not None:
+                details.append(f"stock: {stock}")
+            if description:
+                details.append(description)
+            lines.append(" | ".join(details))
+        return "\n".join(lines)
+
+    @staticmethod
+    def _build_user_block(ctx: dict[str, Any]) -> str:
+        if not ctx:
+            return ""
+        parts: list[str] = []
+        if ctx.get("name"):
+            parts.append(f"Nombre: {ctx['name']}")
+        if ctx.get("order_count"):
+            parts.append(f"Pedidos realizados: {ctx['order_count']}")
+        if ctx.get("top_products"):
+            products_str = ", ".join(ctx["top_products"])
+            parts.append(f"Productos que más ha comprado: {products_str}")
+        return "\n".join(parts)
+
+    async def get_response(
+        self,
+        user_message: str,
+        auth_token: str | None,
+        user_id: uuid.UUID | None = None,
+        clear_history: bool = False,
+    ) -> str:
+        # Clear session if requested
+        if clear_history and user_id:
+            await conversation_memory.clear(user_id)
+            return "Conversación reiniciada. ¿En qué puedo ayudarte?"
+
+        query = self._build_search_query(user_message)
+
+        # Parallel: history, user profile, price extraction
+        async def _empty_list() -> list:
+            return []
+
+        async def _empty_dict() -> dict:
+            return {}
+
+        history_coro = (
+            conversation_memory.get_history(user_id) if user_id else _empty_list()
+        )
+        context_coro = (
+            user_context.get_user_context(user_id, auth_token) if user_id else _empty_dict()
+        )
+        price_coro = price_extractor.extract_price_range(
+            user_message, groq_client=self.client, model=self.model
         )
 
-    def _extract_keywords(self, message: str) -> str:
-        """Extrae palabras relevantes para buscar productos."""
-        # Elimina palabras comunes y deja solo términos significativos
-        stopwords = {"hola", "productos", "qué", "cómo", "cuál", "precio", "tienen", "busco", "necesito"}
-        words = re.findall(r'\b\w+\b', message.lower())
-        keywords = [w for w in words if w not in stopwords and len(w) > 2]
-        return " ".join(keywords) if keywords else ""
+        history, ctx, price_range = await asyncio.gather(
+            history_coro, context_coro, price_coro
+        )
 
-    def _search_products(self, query: str) -> List[Dict[str, Any]]:
-        """Busca productos usando el servicio de productos (si está disponible)."""
-        if not self.product_service:
-            return []
-        # Asumimos que product_service tiene un método search_products(query)
-        # Si no, puedes adaptar: por ejemplo, usar el modelo Product para hacer filtros.
-        try:
-            # Llamada asíncrona - aquí usamos un helper síncrono si es necesario
-            # Si tu product_service es asíncrono, necesitarás un evento loop.
-            # Por simplicidad, asumimos que product_service tiene un método síncrono o usamos asyncio.run()
-            import asyncio
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            results = loop.run_until_complete(
-                self.product_service.search_products(query, limit=5)
+        min_price = price_range.get("min_price")
+        max_price = price_range.get("max_price")
+
+        # Product search with price filters
+        products: list[dict[str, Any]] = []
+        if query:
+            products = await product_client.search_products(
+                query, auth_token, limit=8, min_price=min_price, max_price=max_price
             )
-            loop.close()
-            return results
-        except Exception as e:
-            print(f"Error buscando productos: {e}")
-            return []
+        if not products:
+            products = await product_client.list_products(
+                auth_token, limit=8, max_price=max_price
+            )
 
-    def get_response(self, user_message: str) -> str:
-        """Versión con búsqueda de productos."""
-        # 1. Extraer palabras clave
-        keywords = self._extract_keywords(user_message)
+        # Build context blocks
+        products_block = self._format_products(products)
+        products_section = (
+            f"Productos disponibles:\n{products_block}"
+            if products_block
+            else "Productos disponibles: (ninguno coincide con los criterios indicados)"
+        )
 
-        # 2. Buscar productos relevantes
-        products_info = ""
-        if keywords and self.product_service:
-            products = self._search_products(keywords)
-            if products:
-                products_info = "\n\n**Productos disponibles:**\n"
-                for p in products[:3]:  # máx 3 productos para no saturar
-                    products_info += f"- {p.get('name')}: ${p.get('price')} - {p.get('description', '')[:100]}\n"
+        user_block = self._build_user_block(ctx)
 
-        # 3. Construir mensaje enriquecido
-        enriched_message = user_message
-        if products_info:
-            enriched_message = f"{user_message}\n\nInformación de productos:\n{products_info}"
+        # Build the messages list for Groq
+        messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-        # 4. Llamar a Groq
+        # Inject user context as a system note
+        if user_block:
+            messages.append({
+                "role": "system",
+                "content": f"Información del usuario:\n{user_block}",
+            })
+
+        # Add conversation history
+        messages.extend(history)
+
+        # Final user message with product context
+        enriched = (
+            f"Pregunta del usuario:\n{user_message}\n\n"
+            f"Contexto autoritativo (única fuente de verdad):\n{products_section}"
+        )
+        if min_price is not None or max_price is not None:
+            price_note = []
+            if min_price is not None:
+                price_note.append(f"precio mínimo ${min_price}")
+            if max_price is not None:
+                price_note.append(f"precio máximo ${max_price}")
+            enriched += f"\n\nRESTRICCIÓN DE PRECIO DETECTADA: {', '.join(price_note)}. " \
+                        "No recomiendes nada fuera de este rango."
+        messages.append({"role": "user", "content": enriched})
+
         try:
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": enriched_message}
-                ],
-                temperature=0.7,
-                max_tokens=500,
-                stream=False
+                messages=messages,
+                temperature=0.3,
+                max_tokens=600,
+                stream=False,
             )
-            return completion.choices[0].message.content
-        except Exception as e:
-            print(f"Error en Groq: {e}")
-            return "Lo siento, no pude procesar tu consulta sobre productos."
+            response_text = completion.choices[0].message.content
+        except Exception as exc:
+            logger.exception("Groq completion failed: %s", exc)
+            return "Lo siento, no pude procesar tu consulta en este momento."
 
-    # El método stream_response se puede adaptar igual...
+        # Persist turn to session memory
+        if user_id:
+            await conversation_memory.append_turn(user_id, user_message, response_text)
+
+        return response_text

@@ -9,6 +9,8 @@ from order_service.src.core.database import Base
 
 
 class OrderStatus(str, enum.Enum):
+    pending_stock_confirmation = "pending_stock_confirmation"
+    confirmed = "confirmed"
     pending = "pending"
     paid = "paid"
     shipped = "shipped"
@@ -24,17 +26,24 @@ class Order(Base):
     status = Column(
         SAEnum(OrderStatus, name="order_status"),
         nullable=False,
-        default=OrderStatus.pending,
+        default=OrderStatus.pending_stock_confirmation,
     )
     total_amount = Column(Numeric(12, 2), nullable=False)
     shipping_address = Column(JSONB, nullable=False)
     notes = Column(Text, nullable=True)
+    saga_id = Column(UUID(as_uuid=True), nullable=True)
+    reservation_id = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
 
-    CANCELLABLE_STATUSES = {OrderStatus.pending, OrderStatus.paid}
+    CANCELLABLE_STATUSES = {
+        OrderStatus.pending_stock_confirmation,
+        OrderStatus.confirmed,
+        OrderStatus.pending,
+        OrderStatus.paid,
+    }
 
     def can_cancel(self) -> bool:
         return self.status in self.CANCELLABLE_STATUSES
