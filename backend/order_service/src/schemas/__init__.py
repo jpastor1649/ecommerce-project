@@ -7,7 +7,6 @@ from order_service.src.schemas.orders import (
     OrderListResponse,
     OrderResponse,
     OrderStatusUpdate,
-    ProductStockInfo,
 )
 
 __all__ = [
@@ -17,5 +16,4 @@ __all__ = [
     "OrderListResponse",
     "OrderResponse",
     "OrderStatusUpdate",
-    "ProductStockInfo",
 ]

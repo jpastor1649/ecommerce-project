@@ -6,6 +6,8 @@ import './OrdersPage.css'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All statuses' },
+  { value: 'pending_stock_confirmation', label: 'Awaiting stock' },
+  { value: 'confirmed', label: 'Confirmed' },
   { value: 'pending', label: 'Pending' },
   { value: 'paid', label: 'Paid' },
   { value: 'shipped', label: 'Shipped' },
@@ -13,7 +15,7 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
-const CANCELLABLE_STATUSES = new Set(['pending', 'paid'])
+const CANCELLABLE_STATUSES = new Set(['pending_stock_confirmation', 'confirmed', 'pending', 'paid'])
 
 function formatCurrency(value) {
   const number = Number(value)

@@ -1,7 +1,9 @@
 """Product Service - Business logic for product catalog operations."""
 
 import asyncio
+import uuid as _uuid
 from collections import defaultdict
+from datetime import datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 import httpx
@@ -11,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
 from product_service.src.models.product import Category, Product, ProductImage
+from product_service.src.models.reservation import StockReservation
 from product_service.src.core.config.settings import settings
 from product_service.src.core.redis_client import get_redis_client
 
@@ -315,11 +318,15 @@ class ProductService:
 
         return items
 
-    async def reserve_stock(self, items: list[dict]) -> None:
-        """Atomically reserve stock for multiple products."""
+    async def reserve_stock(self, items: list[dict], order_id: UUID) -> UUID:
+        """Atomically reserve stock for multiple products and create StockReservation rows.
+
+        Returns the reservation_id UUID grouping all items for this order.
+        Raises HTTPException on insufficient stock or missing products.
+        """
         totals_by_product_id: dict[UUID, int] = defaultdict(int)
         for item in items:
-            totals_by_product_id[item["product_id"]] += int(item["quantity"])
+            totals_by_product_id[UUID(str(item["product_id"]))] += int(item["quantity"])
 
         product_ids = list(totals_by_product_id.keys())
         result = await self.db.execute(
@@ -347,31 +354,50 @@ class ProductService:
                     detail=f"Insufficient stock for '{product.name}'.",
                 )
 
+        reservation_id = _uuid.uuid4()
+        expires_at = datetime.utcnow() + timedelta(minutes=15)
+
         for product_id, requested_qty in totals_by_product_id.items():
             products_by_id[product_id].stock -= requested_qty
+            self.db.add(StockReservation(
+                reservation_id=reservation_id,
+                order_id=order_id,
+                product_id=product_id,
+                quantity_reserved=requested_qty,
+                expires_at=expires_at,
+                status="ACTIVE",
+            ))
 
         await self.db.commit()
+        return reservation_id
 
-    async def release_stock(self, items: list[dict]) -> None:
-        """Release previously reserved stock for multiple products."""
-        totals_by_product_id: dict[UUID, int] = defaultdict(int)
-        for item in items:
-            totals_by_product_id[item["product_id"]] += int(item["quantity"])
+    async def release_stock(self, order_id: UUID) -> bool:
+        """Release stock for all ACTIVE reservations of the given order_id.
 
-        product_ids = list(totals_by_product_id.keys())
+        Returns True if reservations were found and released, False if none existed.
+        """
         result = await self.db.execute(
+            select(StockReservation).where(
+                StockReservation.order_id == order_id,
+                StockReservation.status == "ACTIVE",
+            ).with_for_update()
+        )
+        reservations = result.scalars().all()
+
+        if not reservations:
+            return False
+
+        product_ids = [r.product_id for r in reservations]
+        prod_result = await self.db.execute(
             select(Product).where(Product.id.in_(product_ids)).with_for_update()
         )
-        products_by_id = {product.id: product for product in result.scalars().all()}
+        products_by_id = {p.id: p for p in prod_result.scalars().all()}
 
-        missing = [str(pid) for pid in product_ids if pid not in products_by_id]
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Products not found: {', '.join(missing)}",
-            )
-
-        for product_id, quantity in totals_by_product_id.items():
-            products_by_id[product_id].stock += quantity
+        for reservation in reservations:
+            product = products_by_id.get(reservation.product_id)
+            if product:
+                product.stock += reservation.quantity_reserved
+            reservation.status = "RELEASED"
 
         await self.db.commit()
+        return True
