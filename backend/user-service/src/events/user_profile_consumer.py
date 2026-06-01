@@ -88,7 +88,9 @@ class UserProfileEventConsumer:
                 channel.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
+            auth_user_id = data.get("auth_user_id")
             profile = ProfileCreate(
+                id=auth_user_id or None,
                 name=full_name.strip(),
                 email=email.strip().lower(),
                 phone=data.get("phone"),

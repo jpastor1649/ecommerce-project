@@ -41,7 +41,19 @@ class UserService:
         return user
 
     def create_profile(self, data):
-        return self.create_user(data)
+        existing_user = self.db.query(User).filter(User.email == data.email).first()
+        if existing_user:
+            raise HTTPException(status_code=409, detail="Email already exists")
+
+        kwargs = dict(name=data.name, email=data.email, phone=data.phone, role=data.role)
+        if data.id is not None:
+            kwargs["id"] = data.id
+
+        user = User(**kwargs)
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
 
     def get_user(self, user_id):
         user = self.db.query(User).filter(User.id == user_id).first()

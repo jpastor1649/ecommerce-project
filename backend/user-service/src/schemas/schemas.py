@@ -31,6 +31,7 @@ class UserCreate(BaseModel):
 
 
 class ProfileCreate(BaseModel):
+    id: Optional[UUID] = None
     name: str
     email: EmailStr
     phone: Optional[str] = None

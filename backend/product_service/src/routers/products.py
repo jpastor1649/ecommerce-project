@@ -46,7 +46,6 @@ async def get_products(
     category_slug: str | None = Query(None, description="Filtrar por categoría"),
     min_price: Decimal | None = Query(None, description="Precio mínimo"),
     max_price: Decimal | None = Query(None, description="Precio máximo"),
-    _: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return product catalog, optionally filtered by category slug and price range."""
@@ -56,7 +55,6 @@ async def get_products(
 
 @router.get("/categories", response_model=list[CategoryResponse])
 async def get_categories(
-    _: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return all active categories."""
@@ -112,7 +110,6 @@ async def search_products(
     category_slug: str | None = Query(None, description="Optional category filter"),
     min_price: Decimal | None = Query(None, description="Precio mínimo"),
     max_price: Decimal | None = Query(None, description="Precio máximo"),
-    _: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Search products by name or description with optional price range filter."""
@@ -187,7 +184,6 @@ async def get_reviews_received(
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: UUID,
-    _: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return a product by its ID."""
@@ -225,7 +221,6 @@ async def add_product_image(
 @router.get("/{product_id}/images", response_model=list[ProductImageResponse])
 async def get_product_images(
     product_id: UUID,
-    _: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List gallery images for a product."""
@@ -285,7 +280,6 @@ async def set_cover_image(
 @router.get("/{product_id}/reviews", response_model=list[ProductReviewResponse])
 async def get_product_reviews(
     product_id: UUID,
-    _: AuthenticatedUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List active reviews for a product."""

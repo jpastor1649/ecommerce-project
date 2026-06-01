@@ -95,7 +95,7 @@ class OrderSagaConsumer:
                 channel.close()
 
             except Exception as exc:
-                logger.warning("OrderSagaConsumer connection error: %s — retrying in 2s", exc)
+                logger.warning("OrderSagaConsumer connection error: %r — retrying in 2s", exc)
                 time.sleep(2)
             finally:
                 try:
