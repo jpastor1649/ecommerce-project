@@ -12,9 +12,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="AI_DEBUG")
     api_v1_prefix: str = Field(default="/api/v1", alias="AI_API_V1_PREFIX")
 
-    # API key can be provided with the new variable AI_API_KEY.
     ai_api_key: str | None = Field(default=None, alias="AI_API_KEY")
-    # Backward compatibility for previous local tests.
     groq_api_key: str | None = Field(default=None, alias="GROQ_API_KEY")
 
     ai_model: str = Field(default="llama-3.1-8b-instant", alias="AI_MODEL")
@@ -29,7 +27,6 @@ class Settings(BaseSettings):
         default=10,
         alias="PRODUCT_SERVICE_TIMEOUT_SECONDS",
     )
-
     user_service_url: str = Field(
         default="http://user-service:8000",
         alias="USER_SERVICE_URL",
@@ -51,6 +48,18 @@ class Settings(BaseSettings):
         alias="JWT_ALGORITHM",
     )
 
+    # ── Rate limiting ─────────────────────────────────────────────────────────
+    rate_limit_requests: int = Field(
+        default=10,
+        alias="AI_RATE_LIMIT_REQUESTS",
+        description="Max AI requests per user/IP per window",
+    )
+    rate_limit_window_seconds: int = Field(
+        default=60,
+        alias="AI_RATE_LIMIT_WINDOW_SECONDS",
+        description="Rate limit sliding window in seconds",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
@@ -59,14 +68,13 @@ class Settings(BaseSettings):
 
     @property
     def resolved_api_key(self) -> str | None:
-        """Return the first available API key."""
         return self.ai_api_key or self.groq_api_key
 
     @property
     def allowed_origins(self) -> list[str]:
-        """Parse comma-separated origins from environment."""
         origins = [item.strip() for item in self.allowed_origins_raw.split(",") if item.strip()]
         return origins or ["http://localhost:3000"]
 
 
 settings = Settings()
+
