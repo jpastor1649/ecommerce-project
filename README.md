@@ -12,6 +12,28 @@ Diseñar e implementar una arquitectura segura aplicando tres patrones de seguri
 
 ---
 
+## Cómo ejecutar
+
+```bash
+# 1. Generar certificado TLS (solo la primera vez)
+bash generate_certs.sh
+
+# 2. Levantar el stack
+docker compose up -d --build
+
+# 3. Confiar el certificado en el navegador (solo la primera vez)
+#    Abrir en el browser: https://localhost:8443/health
+#    → click "Avanzado" → "Continuar a localhost (no seguro)"
+#    El browser recordará la excepción; no hace falta repetir este paso.
+
+# 4. Abrir la aplicación
+#    http://localhost:3000
+```
+
+> **Nota:** El certificado es autofirmado (entorno de desarrollo). El paso 3 es necesario una única vez por navegador para que el frontend pueda comunicarse con el gateway por HTTPS sin que el browser bloquee la conexión.
+
+---
+
 ## Patrones Implementados
 
 ### 1. Network Segmentation Pattern

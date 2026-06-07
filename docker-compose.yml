@@ -343,6 +343,7 @@ services:
       - "${API_GATEWAY_HTTPS_PORT:-8443}:8443"  # HTTPS (Secure Channel)
     volumes:
       - ./api-gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./api-gateway/shared.conf:/etc/nginx/api-gateway/shared.conf:ro
       - ./api-gateway/certs:/etc/nginx/certs:ro  # TLS certificates
     networks:
       - subnet_a  # Faces the public / frontend
