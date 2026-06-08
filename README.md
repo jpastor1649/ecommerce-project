@@ -141,7 +141,7 @@ Internet / Browser
 
 **Componentes y Conectores** — qué habla con qué y por qué canal:
 
-![Component & Connector](docs/architecture/Component_Connectors_Current.png)
+![Component & Connector](docs/lab4/C%26C.png)
 
 **Despliegue** — cómo se mapean los contenedores y las redes:
 
