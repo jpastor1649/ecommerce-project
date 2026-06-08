@@ -151,9 +151,9 @@ Internet / Browser
 
 ![Decomposition](docs/architecture/Decomposition_Current.png)
 
-**Presentación** — estructura del frontend Next.js:
+**N-Tier** — capas del sistema de extremo a extremo:
 
-![Presentation](docs/architecture/Presentation_Current.png)
+![N-Tier](docs/architecture/NTier_Current.png)
 
 > Los fuentes PlantUML se encuentran en `docs/architecture/*.puml`.
 

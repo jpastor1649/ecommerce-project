@@ -5,7 +5,7 @@ skinparam shadowing false
 skinparam defaultFontSize 11
 top to bottom direction
 
-title Vista de Presentación N-Tier — AICart (Jun 2026)
+title Vista N-Tier — AICart (Jun 2026)
 
 package "Tier 1 — Cliente" {
   component "Browser\n(Usuario)" as Browser
