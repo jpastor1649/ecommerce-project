@@ -272,7 +272,7 @@ El clúster pasó de 2 a 4 réplicas sin interrumpir el servicio.
 
 ## 4. Pull Request
 
-> Link al PR: *(agregar link del PR en GitHub aquí)*
+> Link al PR: https://github.com/jpastor1649/ecommerce-project/pull/26
 
 ---
 
