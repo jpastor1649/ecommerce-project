@@ -1,6 +1,6 @@
 # AICart — Plataforma de E-Commerce con IA
 
-**Curso:** Software Architecture 2025-II  
+**Curso:** Software Architecture 2026-I  
 **Stack:** Next.js 14 · FastAPI · NGINX · RabbitMQ · Redis · PostgreSQL · Groq LLM  
 **Licencia:** MIT
 
