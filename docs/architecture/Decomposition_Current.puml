@@ -3,115 +3,72 @@
 skinparam componentStyle rectangle
 skinparam shadowing false
 skinparam defaultFontSize 10
+skinparam packageStyle frame
 left to right direction
 
-title Vista de Descomposición — AICart (Jun 2026)
+title Vista de Descomposición — Dominios de Negocio AICart (Jun 2026)
 
-package "ecommerce-project" {
-
-  package "frontend (Next.js 14)" {
-    component "app/\n(rutas SSR + layouts)" as FEApp
-    component "widgets/\n(DashboardLayout\nChatWidget)" as FEWidgets
-    component "components/ + pages/\n(pantallas por feature)" as FEPages
-    component "shared/\n(config, lib/auth,\nlib/http, hooks, utils)" as FEShared
-    component "middleware.js\n(route guards)" as FEMiddleware
-
-    FEApp --> FEPages    : composición de rutas
-    FEApp --> FEWidgets  : shell de dashboard
-    FEPages --> FEShared : API client + auth helpers
-    FEWidgets --> FEShared
-    FEMiddleware --> FEShared : cookie auth_token
-  }
-
-  package "api-gateway (Nginx)" {
-    component "nginx.conf\n(upstream, rate-limit zones,\nHTTP→HTTPS)" as NGConf
-    component "shared.conf\n(routing, CORS, security headers)" as NGShared
-  }
-
-  package "coordinator" {
-    component "coordinator.py\n(watchdog polling /health,\nPOST /activate en fallo)" as Coord
-  }
-
-  package "backend" {
-
-    package "auth_service" {
-      component "routers/auth.py" as AuthRouters
-      component "services/auth_service.py" as AuthServices
-      component "models/ + schemas/" as AuthDomain
-      component "core/ (JWT, bcrypt,\nRedis, DB, settings)" as AuthCore
-      component "events/publisher.py\n(AUTH_USER_REGISTERED)" as AuthEvents
-
-      AuthRouters --> AuthServices
-      AuthServices --> AuthDomain
-      AuthServices --> AuthCore
-      AuthServices --> AuthEvents
-    }
-
-    package "user-service" {
-      component "routers/router.py" as UserRouters
-      component "services/services.py" as UserServices
-      component "models/ + schemas/" as UserDomain
-      component "core/ (DB, settings)" as UserCore
-      component "events/user_profile_consumer.py\n(pika thread)" as UserEvents
-
-      UserRouters --> UserServices
-      UserServices --> UserDomain
-      UserServices --> UserCore
-      UserEvents --> UserServices : perfil creado
-    }
-
-    package "product_service" {
-      component "routers/\n(products, internal_inventory)" as ProductRouters
-      component "services/\n(product, category,\nimage_gallery, review)" as ProductServices
-      component "models/ + schemas/" as ProductDomain
-      component "core/ (DB, Redis, settings)" as ProductCore
-      component "events/\n(ProductSagaConsumer\nSagaEventPublisher)" as ProductEvents
-
-      ProductRouters --> ProductServices
-      ProductServices --> ProductDomain
-      ProductServices --> ProductCore
-      ProductEvents --> ProductServices : saga stock
-    }
-
-    package "order_service" {
-      component "routers/orders.py" as OrderRouters
-      component "services/\n(order_service,\nproduct_client,\ntimeout_worker)" as OrderServices
-      component "models/ + schemas/\n(OrderStatus enum,\nbuild_envelope)" as OrderDomain
-      component "core/ (DB, settings)" as OrderCore
-      component "events/\n(OrderSagaConsumer\nSagaEventPublisher)" as OrderEvents
-
-      OrderRouters --> OrderServices
-      OrderServices --> OrderDomain
-      OrderServices --> OrderCore
-      OrderEvents --> OrderServices : saga confirmación
-    }
-
-    package "AI_service" {
-      component "routers/chat.py" as AIRouters
-      component "services/\n(Ai_service,\nconversation_memory,\nprice_extractor,\nproduct_client,\nuser_client)" as AIServices
-      component "core/\n(RateLimitMiddleware,\nRedis, settings, security)" as AICore
-
-      AIRouters --> AIServices
-      AIServices --> AICore
-    }
-  }
+' ─── DOMINIO IDENTIDAD ───────────────────────────────────────────
+package "Dominio: Identidad\n(auth-service)" #LightBlue {
+  component "Responsabilidades:\n- Registro de usuarios\n- Autenticación (JWT + bcrypt)\n- Emisión y revocación de tokens\n- Gestión de sesiones activas" as AuthResp
+  component "Entidades propias:\nUser {id, email, password_hash,\nis_active, created_at}" as AuthEntities
+  component "Reglas de negocio:\n- Email único en el sistema\n- Token válido por TTL configurable\n- Blacklist en Redis al logout\n- Cold-spare: /activate cambia rol" as AuthRules
+  component "Eventos emitidos:\nAUTH_USER_REGISTERED\n→ user_profile_create_queue" as AuthEvents
 }
 
-' Conexiones inter-paquete
-FEApp --> NGConf : REST HTTPS
+' ─── DOMINIO PERFIL ─────────────────────────────────────────────
+package "Dominio: Perfil de Usuario\n(user-service)" #LightGreen {
+  component "Responsabilidades:\n- Gestión de perfiles de comprador/vendedor\n- Gestión de direcciones de envío\n- Lookup interno de perfil para otros servicios" as UserResp
+  component "Entidades propias:\nUserProfile {user_id, name, role}\nAddress {street, city, country}" as UserEntities
+  component "Reglas de negocio:\n- Perfil creado automáticamente\n  al registrarse (vía evento)\n- user_id sincronizado como UUID string\n  con Dominio Identidad" as UserRules
+  component "Eventos consumidos:\nAUTH_USER_REGISTERED\n(consumer thread pika)" as UserEvents
+}
 
-NGConf --> AuthRouters    : /auth/*
-NGConf --> UserRouters    : /users/*, /internal/*
-NGConf --> ProductRouters : /products/*
-NGConf --> OrderRouters   : /orders/*
-NGConf --> AIRouters      : /ai/*
+' ─── DOMINIO CATÁLOGO ───────────────────────────────────────────
+package "Dominio: Catálogo e Inventario\n(product-service)" #LightYellow {
+  component "Responsabilidades:\n- CRUD de productos por vendedor\n- Gestión de categorías\n- Galería de imágenes (máx 8/producto)\n- Reviews y calificaciones\n- Reserva y liberación de stock" as ProductResp
+  component "Entidades propias:\nProduct {id, seller_user_id, stock, price}\nCategory · ProductReview\nProductImage · StockReservation\nProcessedEvent (idempotencia)" as ProductEntities
+  component "Reglas de negocio:\n- Lock pesimista en reserva de stock\n- Idempotencia por event_id (processed_events)\n- Cache de seller/categoría TTL 900s\n- Stock no puede quedar negativo" as ProductRules
+  component "Saga — Inventario:\nConsume: order.created → reserva stock\nEmite: STOCK_RESERVED / STOCK_UNAVAILABLE\n(exchange commerce.saga + DLQ)" as ProductSaga
+}
 
-Coord --> AuthCore : watchdog
-AuthEvents --> UserEvents : RabbitMQ (AUTH_USER_REGISTERED)
-ProductEvents --> OrderEvents : RabbitMQ (commerce.saga)
-OrderEvents --> ProductEvents : RabbitMQ (commerce.saga)
-OrderServices --> ProductRouters : HTTP /internal/products/*
-AIServices --> UserRouters    : HTTP /users/*
-AIServices --> ProductRouters : HTTP /products/*
+' ─── DOMINIO COMERCIO ───────────────────────────────────────────
+package "Dominio: Comercio / Órdenes\n(order-service)" #LightSalmon {
+  component "Responsabilidades:\n- Ciclo de vida de órdenes\n- Vista de ventas para vendedores\n- Cancelación manual y por timeout\n- Gestión de estado (enum OrderStatus)" as OrderResp
+  component "Entidades propias:\nOrder {id, saga_id, reservation_id,\nstatus, shipping_address JSONB}\nOrderItem · ProcessedEvent (idempotencia)" as OrderEntities
+  component "Reglas de negocio:\n- Orden inicia en pending_stock_confirmation\n- Auto-cancelación tras 30s sin respuesta\n- Idempotencia por event_id\n- Solo el dueño puede cancelar" as OrderRules
+  component "Saga — Órdenes:\nEmite: ORDER_CREATED\nConsume: stock.reserved → confirmed\n         stock.unavailable → cancelled" as OrderSaga
+}
+
+' ─── DOMINIO IA ─────────────────────────────────────────────────
+package "Dominio: Asistente IA\n(ai-service)" #Plum {
+  component "Responsabilidades:\n- Chat conversacional con contexto\n- Recomendaciones limitadas al inventario real\n- Extracción de rango de precio del mensaje\n- Rate limiting por usuario/IP" as AIResp
+  component "Entidades propias:\nConversationHistory {user_id, messages}\n(en Redis, no en BD)" as AIEntities
+  component "Reglas de negocio:\n- Solo recomienda productos existentes\n- Máx 3 productos por respuesta\n- Respeta presupuesto del usuario\n- Fail-open si Redis no responde\n- 10 req / 60s por usuario (sliding window)" as AIRules
+  component "Dependencias de dominio:\nLee catálogo (product-service)\nLee perfil (user-service)\nInfiere con Groq (Llama 3.1 8b)" as AIDeps
+}
+
+' ─── INFRAESTRUCTURA TRANSVERSAL ────────────────────────────────
+package "Infraestructura Transversal" #LightGray {
+  component "API Gateway (NGINX)\n- Routing por path\n- TLS termination\n- CORS + security headers\n- Rate limiting zonas: general / ai_zone\n- Upstream failover auth" as GW
+  component "Alta Disponibilidad\n- auth-service-cold (spare :8002)\n- spare-coordinator (watchdog)\n- Activa spare tras 3 fallos en 9s" as HA
+  component "Message Bus (RabbitMQ)\n- Exchange fanout: events\n- Exchange topic: commerce.saga\n- DLQ: commerce.saga.dlx" as MB
+  component "Caché / Sesiones (Redis)\n- Blacklist de tokens (auth)\n- Caché cross-service (product)\n- Historial IA (ai)\n- Rate-limit sliding window (ai)" as Cache
+}
+
+' ─── RELACIONES ENTRE DOMINIOS ───────────────────────────────────
+AuthEvents  -->> UserEvents   : evento de integración\nAUTH_USER_REGISTERED
+OrderSaga   -->> ProductSaga  : ORDER_CREATED\n(commerce.saga)
+ProductSaga -->> OrderSaga    : STOCK_RESERVED /\nSTOCK_UNAVAILABLE
+OrderResp   --> ProductResp   : consulta stock\nHTTP /internal/products/*
+AIResp      --> ProductResp   : lee catálogo
+AIResp      --> UserResp      : lee perfil
+
+GW --> AuthResp    : /auth/*
+GW --> UserResp    : /users/*
+GW --> ProductResp : /products/*
+GW --> OrderResp   : /orders/*
+GW --> AIResp      : /ai/*
+HA --> AuthResp    : watchdog
 
 @enduml
