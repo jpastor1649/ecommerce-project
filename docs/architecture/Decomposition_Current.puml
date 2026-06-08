@@ -8,61 +8,37 @@ left to right direction
 
 title Vista de Descomposición — Dominios de Negocio AICart (Jun 2026)
 
-' ─── DOMINIO IDENTIDAD ───────────────────────────────────────────
-package "Dominio: Identidad\n(auth-service)" #LightBlue {
-  component "Responsabilidades:\n- Registro de usuarios\n- Autenticación (JWT + bcrypt)\n- Emisión y revocación de tokens\n- Gestión de sesiones activas" as AuthResp
-  component "Entidades propias:\nUser {id, email, password_hash,\nis_active, created_at}" as AuthEntities
-  component "Reglas de negocio:\n- Email único en el sistema\n- Token válido por TTL configurable\n- Blacklist en Redis al logout\n- Cold-spare: /activate cambia rol" as AuthRules
-  component "Eventos emitidos:\nAUTH_USER_REGISTERED\n→ user_profile_create_queue" as AuthEvents
+package "Identidad\n(auth-service)" #LightBlue {
+  component "Registro y autenticación\nJWT · bcrypt · sesiones Redis" as AuthResp
+  component "User\n{id, email, password_hash}" as AuthEntity
 }
 
-' ─── DOMINIO PERFIL ─────────────────────────────────────────────
-package "Dominio: Perfil de Usuario\n(user-service)" #LightGreen {
-  component "Responsabilidades:\n- Gestión de perfiles de comprador/vendedor\n- Gestión de direcciones de envío\n- Lookup interno de perfil para otros servicios" as UserResp
-  component "Entidades propias:\nUserProfile {user_id, name, role}\nAddress {street, city, country}" as UserEntities
-  component "Reglas de negocio:\n- Perfil creado automáticamente\n  al registrarse (vía evento)\n- user_id sincronizado como UUID string\n  con Dominio Identidad" as UserRules
-  component "Eventos consumidos:\nAUTH_USER_REGISTERED\n(consumer thread pika)" as UserEvents
+package "Perfil de Usuario\n(user-service)" #LightGreen {
+  component "Gestión de perfiles\ny direcciones de envío" as UserResp
+  component "UserProfile · Address" as UserEntity
 }
 
-' ─── DOMINIO CATÁLOGO ───────────────────────────────────────────
-package "Dominio: Catálogo e Inventario\n(product-service)" #LightYellow {
-  component "Responsabilidades:\n- CRUD de productos por vendedor\n- Gestión de categorías\n- Galería de imágenes (máx 8/producto)\n- Reviews y calificaciones\n- Reserva y liberación de stock" as ProductResp
-  component "Entidades propias:\nProduct {id, seller_user_id, stock, price}\nCategory · ProductReview\nProductImage · StockReservation\nProcessedEvent (idempotencia)" as ProductEntities
-  component "Reglas de negocio:\n- Lock pesimista en reserva de stock\n- Idempotencia por event_id (processed_events)\n- Cache de seller/categoría TTL 900s\n- Stock no puede quedar negativo" as ProductRules
-  component "Saga — Inventario:\nConsume: order.created → reserva stock\nEmite: STOCK_RESERVED / STOCK_UNAVAILABLE\n(exchange commerce.saga + DLQ)" as ProductSaga
+package "Catálogo e Inventario\n(product-service)" #LightYellow {
+  component "Productos · categorías\nreviews · galería · stock" as ProductResp
+  component "Product · Category\nProductReview · StockReservation" as ProductEntity
 }
 
-' ─── DOMINIO COMERCIO ───────────────────────────────────────────
-package "Dominio: Comercio / Órdenes\n(order-service)" #LightSalmon {
-  component "Responsabilidades:\n- Ciclo de vida de órdenes\n- Vista de ventas para vendedores\n- Cancelación manual y por timeout\n- Gestión de estado (enum OrderStatus)" as OrderResp
-  component "Entidades propias:\nOrder {id, saga_id, reservation_id,\nstatus, shipping_address JSONB}\nOrderItem · ProcessedEvent (idempotencia)" as OrderEntities
-  component "Reglas de negocio:\n- Orden inicia en pending_stock_confirmation\n- Auto-cancelación tras 30s sin respuesta\n- Idempotencia por event_id\n- Solo el dueño puede cancelar" as OrderRules
-  component "Saga — Órdenes:\nEmite: ORDER_CREATED\nConsume: stock.reserved → confirmed\n         stock.unavailable → cancelled" as OrderSaga
+package "Comercio / Órdenes\n(order-service)" #LightSalmon {
+  component "Ciclo de vida de órdenes\ncancelación · timeout" as OrderResp
+  component "Order · OrderItem\nOrderStatus" as OrderEntity
 }
 
-' ─── DOMINIO IA ─────────────────────────────────────────────────
-package "Dominio: Asistente IA\n(ai-service)" #Plum {
-  component "Responsabilidades:\n- Chat conversacional con contexto\n- Recomendaciones limitadas al inventario real\n- Extracción de rango de precio del mensaje\n- Rate limiting por usuario/IP" as AIResp
-  component "Entidades propias:\nConversationHistory {user_id, messages}\n(en Redis, no en BD)" as AIEntities
-  component "Reglas de negocio:\n- Solo recomienda productos existentes\n- Máx 3 productos por respuesta\n- Respeta presupuesto del usuario\n- Fail-open si Redis no responde\n- 10 req / 60s por usuario (sliding window)" as AIRules
-  component "Dependencias de dominio:\nLee catálogo (product-service)\nLee perfil (user-service)\nInfiere con Groq (Llama 3.1 8b)" as AIDeps
+package "Asistente IA\n(ai-service)" #Plum {
+  component "Chat con contexto\nrecomendaciones · rate limiting" as AIResp
+  component "ConversationHistory\n(Redis)" as AIEntity
 }
 
-' ─── INFRAESTRUCTURA TRANSVERSAL ────────────────────────────────
 package "Infraestructura Transversal" #LightGray {
-  component "API Gateway (NGINX)\n- Routing por path\n- TLS termination\n- CORS + security headers\n- Rate limiting zonas: general / ai_zone\n- Upstream failover auth" as GW
-  component "Alta Disponibilidad\n- auth-service-cold (spare :8002)\n- spare-coordinator (watchdog)\n- Activa spare tras 3 fallos en 9s" as HA
-  component "Message Bus (RabbitMQ)\n- Exchange fanout: events\n- Exchange topic: commerce.saga\n- DLQ: commerce.saga.dlx" as MB
-  component "Caché / Sesiones (Redis)\n- Blacklist de tokens (auth)\n- Caché cross-service (product)\n- Historial IA (ai)\n- Rate-limit sliding window (ai)" as Cache
+  component "API Gateway (NGINX)\nrouting · TLS · CORS" as GW
+  component "Alta Disponibilidad\nauth cold-spare · watchdog" as HA
+  component "RabbitMQ\nevents · saga" as MB
+  component "Redis\nsesiones · caché · rate-limit" as Cache
 }
-
-' ─── RELACIONES ENTRE DOMINIOS ───────────────────────────────────
-AuthEvents  -->> UserEvents   : evento de integración\nAUTH_USER_REGISTERED
-OrderSaga   -->> ProductSaga  : ORDER_CREATED\n(commerce.saga)
-ProductSaga -->> OrderSaga    : STOCK_RESERVED /\nSTOCK_UNAVAILABLE
-OrderResp   --> ProductResp   : consulta stock\nHTTP /internal/products/*
-AIResp      --> ProductResp   : lee catálogo
-AIResp      --> UserResp      : lee perfil
 
 GW --> AuthResp    : /auth/*
 GW --> UserResp    : /users/*
@@ -70,5 +46,12 @@ GW --> ProductResp : /products/*
 GW --> OrderResp   : /orders/*
 GW --> AIResp      : /ai/*
 HA --> AuthResp    : watchdog
+
+AuthResp    -->> UserResp    : AUTH_USER_REGISTERED
+OrderResp   -->> ProductResp : ORDER_CREATED
+ProductResp -->> OrderResp   : STOCK_RESERVED /\nSTOCK_UNAVAILABLE
+OrderResp    --> ProductResp : consulta stock (HTTP)
+AIResp       --> ProductResp : lee catálogo
+AIResp       --> UserResp    : lee perfil
 
 @enduml

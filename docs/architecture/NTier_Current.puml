@@ -8,72 +8,62 @@ top to bottom direction
 title Vista N-Tier — AICart (Jun 2026)
 
 package "Tier 1 — Cliente" {
-  component "Browser\n(Usuario)" as Browser
-  component "Frontend\nNext.js 14\n:3000" as Frontend
+  component "Browser" as Browser
+  component "Frontend\nNext.js 14 · :3000" as Frontend
 }
 
 package "Tier 2 — API Gateway" {
-  component "NGINX\nReverse Proxy + TLS\n:8000 (HTTP→301) / :8443 (HTTPS)\nRate Limiting · CORS · Headers de seguridad" as Gateway
+  component "NGINX\n:8000 (HTTP) · :8443 (HTTPS)" as Gateway
 }
 
-package "Tier 3 — Servicios de Aplicación" {
-  component "auth-service\nFastAPI :8001\nJWT · bcrypt · Redis sessions" as Auth
-  component "auth-service-cold\nFastAPI :8002\n(spare)" as AuthCold
-  component "user-service\nFastAPI :8000\nPerfiles · Direcciones" as UserSvc
-  component "product-service\nFastAPI :8003\nCatálogo · Stock · Reviews" as ProductSvc
-  component "order-service\nFastAPI :8004\nÓrdenes · Saga · Timeout" as OrderSvc
-  component "ai-service\nFastAPI :8005\nChat · Rate Limit · Groq" as AISvc
-  component "spare-coordinator\nWatchdog Python\n(polling /health)" as Coord
+package "Tier 3 — Servicios" {
+  component "auth-service\n:8001" as Auth
+  component "auth-service-cold\n:8002" as AuthCold
+  component "spare-coordinator" as Coord
+  component "user-service\n:8000" as UserSvc
+  component "product-service\n:8003" as ProductSvc
+  component "order-service\n:8004" as OrderSvc
+  component "ai-service\n:8005" as AISvc
 }
 
-package "Tier 4 — Datos e Infraestructura" {
+package "Tier 4 — Datos" {
   database "auth-postgres" as AuthDB
   database "user-postgres" as UserDB
   database "product-postgres" as ProductDB
   database "order-postgres" as OrderDB
-  database "Redis\n(sesiones · caché · rate-limit)" as Redis
-  queue "RabbitMQ\n(events · saga)" as MQ
-  cloud "Groq API\n(Llama 3.1)" as Groq
+  database "Redis" as Redis
+  queue "RabbitMQ" as MQ
+  cloud "Groq API" as Groq
 }
 
-' Tier 1 → Tier 2
-Browser --> Frontend : HTTPS
-Frontend --> Gateway : REST / JSON\nHTTPS :8443 (CSR)\nHTTP interno (SSR)
+Browser  --> Frontend  : HTTPS
+Frontend --> Gateway   : REST / JSON
 
-' Tier 2 → Tier 3
-Gateway --> Auth      : /auth/* (primary)
-Gateway --> AuthCold  : /auth/* (backup)
-Gateway --> UserSvc   : /users/* /internal/*
-Gateway --> ProductSvc: /products/*
-Gateway --> OrderSvc  : /orders/*
-Gateway --> AISvc     : /ai/*
+Gateway --> Auth       : /auth/* (primary)
+Gateway --> AuthCold   : /auth/* (backup)
+Gateway --> UserSvc    : /users/*
+Gateway --> ProductSvc : /products/*
+Gateway --> OrderSvc   : /orders/*
+Gateway --> AISvc      : /ai/*
 
-' Watchdog
 Coord --> Auth     : GET /health
 Coord --> AuthCold : POST /activate
 
-' Tier 3 → Tier 4
-Auth --> AuthDB
-Auth --> Redis
-Auth --> MQ
-
-AuthCold --> AuthDB
-AuthCold --> Redis
-
-UserSvc --> UserDB
-UserSvc --> MQ
-
-ProductSvc --> ProductDB
-ProductSvc --> Redis
-ProductSvc --> MQ
-
-OrderSvc --> OrderDB
-OrderSvc --> MQ
-OrderSvc --> ProductSvc : HTTP /internal/*
-
-AISvc --> Redis
-AISvc --> UserSvc
-AISvc --> ProductSvc
-AISvc --> Groq
+Auth        --> AuthDB
+Auth        --> Redis
+Auth        --> MQ
+AuthCold    --> AuthDB
+UserSvc     --> UserDB
+UserSvc     --> MQ
+ProductSvc  --> ProductDB
+ProductSvc  --> Redis
+ProductSvc  --> MQ
+OrderSvc    --> OrderDB
+OrderSvc    --> MQ
+OrderSvc    --> ProductSvc
+AISvc       --> Redis
+AISvc       --> UserSvc
+AISvc       --> ProductSvc
+AISvc       --> Groq
 
 @enduml
