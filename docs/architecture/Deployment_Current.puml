@@ -1,77 +1,106 @@
 @startuml
 !theme plain
-skinparam shadowing false
 skinparam defaultFontSize 11
-top to bottom direction
+skinparam defaultFontName Arial
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #999999
+skinparam ArrowThickness 1.2
+skinparam ArrowFontSize 9
+skinparam ArrowFontColor #555555
 
-title Vista de Despliegue — Docker Compose (Jun 2026)
+skinparam node {
+  BackgroundColor #FAFAFA
+  BorderColor #AAAAAA
+  BorderStyle dashed
+  BorderThickness 1.5
+  FontStyle bold
+  RoundCorner 10
+}
 
-node "Máquina del Desarrollador" {
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #CCCCCC
+  BorderThickness 1.2
+  RoundCorner 6
+  FontSize 10
+}
 
-  node "subnet_a — 172.20.0.0/24 (Pública)" {
-    node "frontend\nNext.js :3000" as Frontend
-    node "api-gateway\nNginx :8000 (HTTP→301)\n     :8443 (HTTPS TLS 1.2/1.3)" as Gateway
+skinparam database {
+  BackgroundColor #E8F5E8
+  BorderColor #88BB88
+  BorderThickness 1.2
+  FontSize 10
+}
+
+title <size:15><b>AICart -- Vista de Despliegue (Docker Compose)</b></size>
+
+node "Maquina del Desarrollador" {
+
+  node "subnet_a  172.20.0.0/24  (Publica)" #FFF5E8/FFE8C8 {
+    component "<<client>>\n<b>frontend</b>\nNext.js 14  :3000" as FE #FFFAF5
+    component "<<gateway>>\n<b>api-gateway</b>\nNGINX 1.27\n:8000 HTTP-301  :8443 HTTPS\nRate-limiting  CORS  TLS" as GW #FFF8EE
   }
 
-  node "subnet_b — 172.20.1.0/24 (Privada)" {
-    node "auth-service\n:8001 (active)" as Auth
-    node "auth-service-cold\n:8002 (spare)" as AuthCold
-    node "spare-coordinator\n(watchdog)" as Coord
-
-    node "user-service\n:8000" as UserSvc
-    node "product-service\n:8003" as ProductSvc
-    node "order-service\n:8004" as OrderSvc
-    node "ai-service\n:8005" as AISvc
-
-    database "auth-postgres\n:5433→5432" as AuthDB
-    database "user-postgres\n:5434→5432" as UserDB
-    database "product-postgres\n:5435→5432" as ProductDB
-    database "order-postgres\n:5436→5432" as OrderDB
-
-    queue "rabbitmq\n:5672 / :15672" as MQ
-    database "redis\n:6379" as Redis
+  node "subnet_b  172.20.1.0/24  (Privada)" #EEF4FF/D8E8FF {
+    component "<<service>>\n<b>auth-service</b>\nFastAPI :8001  JWT bcrypt" as Auth #FFFFFF
+    component "<<spare>>\n<b>auth-service-cold</b>\nFastAPI :8002  (backup)" as AuthC #F8F8F8
+    component "<<watchdog>>\n<b>spare-coordinator</b>\nPython  polling /health 3s" as Coord #F8F8F8
+    component "<<service>>\n<b>user-service</b>\nFastAPI :8000" as User #FFFFFF
+    component "<<service>>\n<b>product-service</b>\nFastAPI :8003" as Prod #FFFFFF
+    component "<<service>>\n<b>order-service</b>\nFastAPI :8004  Saga" as Order #FFFFFF
+    component "<<service>>\n<b>ai-service</b>\nFastAPI :8005  Groq" as AI #FFFFFF
+    component "<<broker>>\n<b>rabbitmq</b>\nRabbitMQ 3\nAMQP :5672  Mgmt :15672" as MQ #FFFFF0
+    database "<b>auth-postgres</b>\nPostgreSQL 16 :5433" as ADB
+    database "<b>user-postgres</b>\nPostgreSQL 16 :5434" as UDB
+    database "<b>product-postgres</b>\nPostgreSQL 16 :5435" as PDB
+    database "<b>order-postgres</b>\nPostgreSQL 16 :5436" as ODB
+    database "<b>redis</b>\nRedis 7 :6379" as Redis
   }
 }
 
-cloud "GROQ API\n(externa)" as Groq
+cloud "<b>Groq API</b>\nLlama 3.1 8b Instant\n(externa)" as Groq #EEEEFF
 
-' Red pública
-Frontend --> Gateway : NEXT_PUBLIC_API_URL\nhttps://localhost:8443
+note right of Groq
+  <b>Puertos host expuestos:</b>
+  3000  -> frontend
+  8000 / 8443  -> api-gateway
+  15672  -> rabbitmq mgmt
+  5433-5436  -> postgres (dev)
+  6379  -> redis (dev)
+end note
 
-' Gateway → servicios (subnet_b)
-Gateway --> Auth       : /auth/ (primary)
-Gateway --> AuthCold   : /auth/ (backup)
-Gateway --> UserSvc    : /users/, /internal/
-Gateway --> ProductSvc : /products/
-Gateway --> OrderSvc   : /orders/ → /api/v1/orders/
-Gateway --> AISvc      : /ai/ → /api/v1/
+FE    -[#E8A000,thickness=2]->   GW    : HTTPS
 
-' Watchdog
-Coord --> Auth     : GET /health
-Coord --> AuthCold : POST /activate
+GW    -[#4488CC]-> Auth  : /auth/* (primary)
+GW    -[#4488CC,dashed]->        AuthC : /auth/* (failover)
+GW    -[#4488CC]-> User  : /users/*
+GW    -[#4488CC]-> Prod  : /products/*
+GW    -[#4488CC]-> Order : /orders/*
+GW    -[#4488CC]-> AI    : /ai/*
 
-' Dependencias de servicios
-Auth --> AuthDB
-Auth --> Redis
-Auth --> MQ
+Coord -[#888888,dashed]->        Auth  : GET /health
+Coord -[#CC4444,dashed]->        AuthC : POST /activate
 
-AuthCold --> AuthDB
-AuthCold --> Redis
+Auth  -[#55AA55]->  ADB
+AuthC -[#55AA55,dashed]-> ADB
+User  -[#55AA55]->  UDB
+Prod  -[#55AA55]->  PDB
+Order -[#55AA55]->  ODB
 
-UserSvc --> UserDB
-UserSvc --> MQ
+Auth  -[#DD6666]->  Redis : blacklist
+Prod  -[#DD6666]->  Redis : cache
+AI    -[#DD6666]->  Redis : historial
 
-ProductSvc --> ProductDB
-ProductSvc --> Redis
-ProductSvc --> MQ
+Auth  -[#FF9933]->  MQ : AUTH_USER_REGISTERED
+User  -[#FF9933]->  MQ : consume
+Prod  -[#FF9933]->  MQ : STOCK events
+Order -[#FF9933]->  MQ : ORDER_CREATED
 
-OrderSvc --> OrderDB
-OrderSvc --> MQ
-OrderSvc --> ProductSvc
+Order -[#4488CC,dashed]->  Prod : /internal/products/*
+AI    -[#4488CC,dashed]->  User : contexto
+AI    -[#4488CC,dashed]->  Prod : catalogo
 
-AISvc --> Redis
-AISvc --> UserSvc
-AISvc --> ProductSvc
-AISvc --> Groq
+AI    -[#9966CC,thickness=2]->  Groq : inferencia LLM
 
 @enduml
