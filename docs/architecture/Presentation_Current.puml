@@ -2,88 +2,78 @@
 !theme plain
 skinparam componentStyle rectangle
 skinparam shadowing false
-skinparam defaultFontSize 10
-left to right direction
+skinparam defaultFontSize 11
+top to bottom direction
 
-title Vista de Presentación — Frontend Next.js 14 App Router (Jun 2026)
+title Vista de Presentación N-Tier — AICart (Jun 2026)
 
-actor "Usuario\n(autenticado)" as User
-
-package "frontend/src" {
-
-  component "middleware.js\n(route guards:\n/dashboard/* → / sin token\n/ y /register → /dashboard si autenticado)" as Middleware
-
-  package "app/ (App Router)" {
-    component "layout.js + page.js\n(root: → LoginPage)" as AppRoot
-    component "register/page.js\n(→ RegisterPage)" as RouteRegister
-    component "dashboard/layout.js\n(SSR /auth/me via API_SERVER_URL)" as DashboardLayout
-    component "dashboard/products/page.js" as RouteProducts
-    component "dashboard/products/[productId]/page.js" as RouteProductDetail
-    component "dashboard/orders/page.js" as RouteOrders
-    component "dashboard/my-products/page.js" as RouteMyProducts
-    component "dashboard/profile/page.js" as RouteProfile
-  }
-
-  package "widgets/dashboard" {
-    component "DashboardLayout.jsx\n(shell de navegación)" as DashboardWidget
-    component "ChatWidget.jsx\n(chat IA, POST /ai/chat/)" as ChatWidget
-  }
-
-  package "components/ + pages/ (feature screens)" {
-    component "auth/LoginPage\nauth/RegisterPage" as AuthPages
-    component "catalog/ProductCatalogPage\ncatalog/ProductDetailPage" as CatalogPages
-    component "seller/MyProductsPage" as SellerPages
-    component "orders/OrdersPage" as OrderPages
-    component "profile/UserProfilePage" as ProfilePages
-  }
-
-  package "shared" {
-    component "config/api.js\n(NEXT_PUBLIC_API_URL)" as ApiConfig
-    component "lib/auth.js\n(cookie auth_token SameSite=Strict)" as AuthLib
-    component "lib/http.js\n(fetchWithGatewayRetry\nbackoff 500ms × 3)" as HttpLib
-    component "utils/api.js\n(fetchJson, fetchJsonWithAuth\nfetchUserLabel, fetchUserLabels)" as ApiUtils
-    component "hooks/\n(useProductDetail, useProfileForm,\nuseAddressForm, useProductActivity,\nuseFormHandler, useUserProfile)" as Hooks
-  }
+package "Tier 1 — Cliente" {
+  component "Browser\n(Usuario)" as Browser
+  component "Frontend\nNext.js 14\n:3000" as Frontend
 }
 
-component "API Gateway\nhttps://localhost:8443\n(CSR)\nhttp://api-gateway:8000\n(SSR interno)" as Gateway
+package "Tier 2 — API Gateway" {
+  component "NGINX\nReverse Proxy + TLS\n:8000 (HTTP→301) / :8443 (HTTPS)\nRate Limiting · CORS · Headers de seguridad" as Gateway
+}
 
-User --> Middleware : navegación browser
-Middleware --> AppRoot
+package "Tier 3 — Servicios de Aplicación" {
+  component "auth-service\nFastAPI :8001\nJWT · bcrypt · Redis sessions" as Auth
+  component "auth-service-cold\nFastAPI :8002\n(spare)" as AuthCold
+  component "user-service\nFastAPI :8000\nPerfiles · Direcciones" as UserSvc
+  component "product-service\nFastAPI :8003\nCatálogo · Stock · Reviews" as ProductSvc
+  component "order-service\nFastAPI :8004\nÓrdenes · Saga · Timeout" as OrderSvc
+  component "ai-service\nFastAPI :8005\nChat · Rate Limit · Groq" as AISvc
+  component "spare-coordinator\nWatchdog Python\n(polling /health)" as Coord
+}
 
-AppRoot --> AuthPages         : /
-AppRoot --> RouteRegister     : /register
-AppRoot --> DashboardLayout   : /dashboard/*
+package "Tier 4 — Datos e Infraestructura" {
+  database "auth-postgres" as AuthDB
+  database "user-postgres" as UserDB
+  database "product-postgres" as ProductDB
+  database "order-postgres" as OrderDB
+  database "Redis\n(sesiones · caché · rate-limit)" as Redis
+  queue "RabbitMQ\n(events · saga)" as MQ
+  cloud "Groq API\n(Llama 3.1)" as Groq
+}
 
-DashboardLayout --> DashboardWidget
-DashboardWidget --> ChatWidget
-DashboardLayout --> RouteProducts
-DashboardLayout --> RouteProductDetail
-DashboardLayout --> RouteOrders
-DashboardLayout --> RouteMyProducts
-DashboardLayout --> RouteProfile
+' Tier 1 → Tier 2
+Browser --> Frontend : HTTPS
+Frontend --> Gateway : REST / JSON\nHTTPS :8443 (CSR)\nHTTP interno (SSR)
 
-RouteProducts --> CatalogPages
-RouteProductDetail --> CatalogPages
-RouteOrders --> OrderPages
-RouteMyProducts --> SellerPages
-RouteProfile --> ProfilePages
+' Tier 2 → Tier 3
+Gateway --> Auth      : /auth/* (primary)
+Gateway --> AuthCold  : /auth/* (backup)
+Gateway --> UserSvc   : /users/* /internal/*
+Gateway --> ProductSvc: /products/*
+Gateway --> OrderSvc  : /orders/*
+Gateway --> AISvc     : /ai/*
 
-AuthPages --> HttpLib
-CatalogPages --> HttpLib
-SellerPages --> HttpLib
-OrderPages --> HttpLib
-ProfilePages --> HttpLib
-ChatWidget --> HttpLib
+' Watchdog
+Coord --> Auth     : GET /health
+Coord --> AuthCold : POST /activate
 
-HttpLib --> ApiConfig
-HttpLib --> ApiUtils
-HttpLib --> AuthLib
-Hooks --> ApiUtils
-Hooks --> AuthLib
+' Tier 3 → Tier 4
+Auth --> AuthDB
+Auth --> Redis
+Auth --> MQ
 
-ApiConfig --> Gateway
-ApiUtils --> Gateway
-DashboardLayout --> Gateway : SSR (API_SERVER_URL)
+AuthCold --> AuthDB
+AuthCold --> Redis
+
+UserSvc --> UserDB
+UserSvc --> MQ
+
+ProductSvc --> ProductDB
+ProductSvc --> Redis
+ProductSvc --> MQ
+
+OrderSvc --> OrderDB
+OrderSvc --> MQ
+OrderSvc --> ProductSvc : HTTP /internal/*
+
+AISvc --> Redis
+AISvc --> UserSvc
+AISvc --> ProductSvc
+AISvc --> Groq
 
 @enduml
