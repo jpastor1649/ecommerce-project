@@ -258,7 +258,14 @@ logs/
 
 # Claude Code - local only, never commit
 .claude/
+**/.claude/
 CLAUDE.md
+**/CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.local.md
+.claude.json
+.mcp.json
+**/.mcp.json
 
 # AI-generated documentation - local only, never commit
 .ai-docs/

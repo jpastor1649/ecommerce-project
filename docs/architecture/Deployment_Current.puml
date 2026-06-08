@@ -1,47 +1,77 @@
 @startuml
 !theme plain
 skinparam shadowing false
-left to right direction
+skinparam defaultFontSize 11
+top to bottom direction
 
-title Deployment View - Docker Compose (Current, Apr 2026)
+title Vista de Despliegue — Docker Compose (Jun 2026)
 
-node "Developer Machine" {
-  node "Docker Engine" {
-    node "frontend container\nNext.js :3000" as Frontend
-    node "api-gateway container\nNginx :8000" as Gateway
+node "Máquina del Desarrollador" {
 
-    node "auth-service container\n:8001" as Auth
-    node "user-service container\n:8002->8000" as UserService
-    node "product-service container\n:8003" as Product
-    node "order-service container\n:8004" as Order
+  node "subnet_a — 172.20.0.0/24 (Pública)" {
+    node "frontend\nNext.js :3000" as Frontend
+    node "api-gateway\nNginx :8000 (HTTP→301)\n     :8443 (HTTPS TLS 1.2/1.3)" as Gateway
+  }
 
-    database "auth-postgres\n:5433->5432" as AuthDB
-    database "user-postgres\n:5432->5432\n(user + product tables)" as UserDB
-    database "order-postgres\n:5434->5432" as OrderDB
-    database "redis\n:6379" as Redis
+  node "subnet_b — 172.20.1.0/24 (Privada)" {
+    node "auth-service\n:8001 (active)" as Auth
+    node "auth-service-cold\n:8002 (spare)" as AuthCold
+    node "spare-coordinator\n(watchdog)" as Coord
+
+    node "user-service\n:8000" as UserSvc
+    node "product-service\n:8003" as ProductSvc
+    node "order-service\n:8004" as OrderSvc
+    node "ai-service\n:8005" as AISvc
+
+    database "auth-postgres\n:5433→5432" as AuthDB
+    database "user-postgres\n:5434→5432" as UserDB
+    database "product-postgres\n:5435→5432" as ProductDB
+    database "order-postgres\n:5436→5432" as OrderDB
+
     queue "rabbitmq\n:5672 / :15672" as MQ
+    database "redis\n:6379" as Redis
   }
 }
 
-Frontend --> Gateway : NEXT_PUBLIC_API_URL
-Gateway --> Auth : /auth/
-Gateway --> UserService : /users/, /internal/
-Gateway --> Product : /products/
-Gateway --> Order : /orders/ -> /api/v1/orders/
+cloud "GROQ API\n(externa)" as Groq
 
+' Red pública
+Frontend --> Gateway : NEXT_PUBLIC_API_URL\nhttps://localhost:8443
+
+' Gateway → servicios (subnet_b)
+Gateway --> Auth       : /auth/ (primary)
+Gateway --> AuthCold   : /auth/ (backup)
+Gateway --> UserSvc    : /users/, /internal/
+Gateway --> ProductSvc : /products/
+Gateway --> OrderSvc   : /orders/ → /api/v1/orders/
+Gateway --> AISvc      : /ai/ → /api/v1/
+
+' Watchdog
+Coord --> Auth     : GET /health
+Coord --> AuthCold : POST /activate
+
+' Dependencias de servicios
 Auth --> AuthDB
 Auth --> Redis
 Auth --> MQ
 
-UserService --> UserDB
-UserService --> MQ
+AuthCold --> AuthDB
+AuthCold --> Redis
 
-Product --> UserDB
-Product --> Redis
-Product --> UserService
+UserSvc --> UserDB
+UserSvc --> MQ
 
-Order --> OrderDB
-Order --> Product
-Order --> MQ
+ProductSvc --> ProductDB
+ProductSvc --> Redis
+ProductSvc --> MQ
+
+OrderSvc --> OrderDB
+OrderSvc --> MQ
+OrderSvc --> ProductSvc
+
+AISvc --> Redis
+AISvc --> UserSvc
+AISvc --> ProductSvc
+AISvc --> Groq
 
 @enduml

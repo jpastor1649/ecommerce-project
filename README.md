@@ -1,68 +1,181 @@
-# Lab 5 — Security Patterns
+# AICart — Plataforma de E-Commerce con IA
 
 **Curso:** Software Architecture 2025-II  
-**Fecha:** Junio 2026  
-**Proyecto:** E-Commerce Microservices Platform
+**Stack:** Next.js 14 · FastAPI · NGINX · RabbitMQ · Redis · PostgreSQL · Groq LLM  
+**Licencia:** MIT
 
 ---
 
-## Objetivo
+## ¿Qué es AICart?
 
-Diseñar e implementar una arquitectura segura aplicando tres patrones de seguridad fundamentales sobre el sistema de e-commerce existente, complementado con rate limiting sobre el AI Service y pruebas de carga con JMeter.
+AICart es una plataforma de e-commerce de microservicios con un asistente de IA integrado. Permite a compradores explorar un catálogo de productos, crear órdenes y recibir recomendaciones personalizadas del chat AI; y a vendedores gestionar sus productos y ver sus ventas.
+
+El proyecto aplica patrones reales de arquitectura de software: segmentación de red, saga pattern, cold-spare failover, TLS/HTTPS, rate limiting de doble capa e idempotencia en eventos distribuidos.
+
+---
+
+## Características principales
+
+- Autenticación con JWT, sesiones en Redis y logout con blacklist
+- Catálogo de productos con categorías, galería de imágenes y reviews
+- Flujo de órdenes con confirmación de stock vía **Saga Pattern** (coreografía RabbitMQ)
+- Chat AI con memoria conversacional (Groq + Llama 3.1) limitado al inventario real
+- Failover automático del auth-service con réplica **cold-spare** y watchdog
+- Rate limiting de doble capa (NGINX + Redis sliding window) en el endpoint AI
+- HTTPS end-to-end con TLS 1.2/1.3 y redirección forzada desde HTTP
+- Segmentación de red en dos subredes Docker (pública / privada)
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | Next.js 14 (App Router, SSR + CSR) |
+| Backend | FastAPI, Python 3.12 (3.11 en user-service) |
+| API Gateway | NGINX 1.27 (reverse proxy + TLS + rate limiting) |
+| Mensajería | RabbitMQ 3 (topic exchange + DLQ) |
+| Caché / sesiones | Redis 7 |
+| Bases de datos | PostgreSQL 16 × 4 instancias (DB-per-service) |
+| AI / LLM | Groq API (Llama 3.1 8b Instant) |
+| Contenedores | Docker Compose |
+| Failover | Python watchdog (coordinator) |
+
+---
+
+## Requisitos previos
+
+- Docker y Docker Compose
+- `mkcert` (recomendado) u `openssl` para el certificado TLS
+- ~4 GB de RAM disponibles
+- Puertos libres: `3000`, `8000`, `8443`, `5432–5436`, `6379`, `5672`, `15672`
+- API Key de Groq (obtener en [console.groq.com](https://console.groq.com))
 
 ---
 
 ## Cómo ejecutar
 
 ```bash
-# 1. Generar certificado TLS (solo la primera vez)
+# 1. Clonar el repositorio
+git clone <repo-url>
+cd ecommerce-project
+
+# 2. Configurar variables de entorno
+cp .env.example .env
+# Editar .env y establecer: AI_API_KEY=<tu-clave-groq>
+
+# 3. Generar certificado TLS (solo la primera vez)
 bash generate_certs.sh
 
-# 2. Levantar el stack
+# 4. Levantar el stack
 docker compose up -d --build
 
-# 3. Confiar el certificado en el navegador (solo la primera vez)
-#    Abrir en el browser: https://localhost:8443/health
-#    → click "Avanzado" → "Continuar a localhost (no seguro)"
-#    El browser recordará la excepción; no hace falta repetir este paso.
+# 5. Verificar que todos los servicios estén healthy
+docker compose ps
 
-# 4. Abrir la aplicación
+# 6. Confiar el certificado (solo la primera vez por navegador)
+#    Abrir: https://localhost:8443/health
+#    → "Avanzado" → "Continuar a localhost"
+
+# 7. Abrir la aplicación
 #    http://localhost:3000
 ```
 
-> **Nota:** El certificado es autofirmado (entorno de desarrollo). El paso 3 es necesario una única vez por navegador para que el frontend pueda comunicarse con el gateway por HTTPS sin que el browser bloquee la conexión.
+> El certificado es autofirmado. El paso 6 es necesario para que el frontend pueda
+> comunicarse con el gateway por HTTPS sin bloqueos del browser.
+
+### Puntos de acceso
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| API Gateway HTTPS | https://localhost:8443 |
+| API Gateway HTTP (redirige) | http://localhost:8000 |
+| RabbitMQ Management UI | http://localhost:15672 (guest/guest) |
+
+### Reset de datos
+
+```bash
+docker compose down -v   # elimina los 4 volúmenes Postgres + RabbitMQ
+```
 
 ---
 
-## Patrones Implementados
+## Variables de entorno
+
+Las variables críticas que deben configurarse en `.env`:
+
+| Variable | Descripción |
+|---|---|
+| `AI_API_KEY` | API Key de Groq (requerida para el chat AI) |
+| `AUTH_JWT_SECRET` | Secret para firmar JWT (mín. 32 chars) |
+| `RABBITMQ_USER` / `RABBITMQ_PASS` | Credenciales de RabbitMQ |
+
+> La fuente operativa completa son los `environment:` de cada servicio en `docker-compose.yml`.
+> Los valores por defecto ahí son suficientes para levantar el stack en desarrollo.
+
+---
+
+## Arquitectura
+
+### Segmentación de red
+
+El sistema usa dos subredes Docker aisladas. **El API Gateway es el único contenedor conectado a ambas redes**, actuando como el único punto de entrada al backend.
+
+```
+Internet / Browser
+      │
+      ▼
+┌─────────────────────────── subnet_a (172.20.0.0/24) ──────────────────────────┐
+│  frontend :3000         api-gateway :8000 (HTTP→301) / :8443 (HTTPS)          │
+└────────────────────────────────────┬──────────────────────────────────────────┘
+                                     │
+┌────────────────────────── subnet_b (172.20.1.0/24) ───────────────────────────┐
+│  auth-service :8001      user-service :8000     product-service :8003         │
+│  auth-service-cold :8002  order-service :8004   ai-service :8005              │
+│  spare-coordinator       4× PostgreSQL           RabbitMQ    Redis            │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Diagramas de arquitectura
+
+**Componentes y Conectores** — qué habla con qué y por qué canal:
+
+![Component & Connector](docs/architecture/Component_Connectors_Current.png)
+
+**Despliegue** — cómo se mapean los contenedores y las redes:
+
+![Deployment](docs/architecture/Deployment_Current.png)
+
+**Descomposición** — organización interna del código por paquete:
+
+![Decomposition](docs/architecture/Decomposition_Current.png)
+
+**Presentación** — estructura del frontend Next.js:
+
+![Presentation](docs/architecture/Presentation_Current.png)
+
+> Los fuentes PlantUML se encuentran en `docs/architecture/*.puml`.
+
+---
+
+## Patrones arquitectónicos implementados
 
 ### 1. Network Segmentation Pattern
 
-**Definición**  
-Particiona la red en segmentos aislados para limitar el acceso no autorizado y contener amenazas. Sigue el modelo zero-trust donde ningún componente confía implícitamente en otro.
-
-**Implementación**  
-Se definieron dos redes virtuales en Docker Compose:
-
-| Red | Zona | Contenedores |
-|---|---|---|
-| `subnet_a` (`172.20.0.0/24`) | Pública | Frontend (Next.js), API Gateway (NGINX) |
-| `subnet_b` (`172.20.1.0/24`) | Privada | Auth, User, Product, Order, AI services + todas las DBs + Redis + RabbitMQ |
-
-El API Gateway (NGINX) es el **único contenedor conectado a ambas redes**, actuando como puente controlado. Ningún servicio backend tiene puertos expuestos al host.
+Particiona la red Docker en dos zonas para limitar el alcance de un posible ataque. La zona pública (`subnet_a`) solo expone frontend y gateway; la zona privada (`subnet_b`) aloja toda la lógica y los datos.
 
 ```yaml
+# docker-compose.yml
 networks:
   subnet_a:
-    driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/24   # Zona pública
+        - subnet: 172.20.0.0/24   # pública
   subnet_b:
-    driver: bridge
     ipam:
       config:
-        - subnet: 172.20.1.0/24   # Zona privada
+        - subnet: 172.20.1.0/24   # privada
 ```
 
 **Beneficio:** Un atacante que comprometa el frontend no puede alcanzar directamente las bases de datos ni los servicios internos.
@@ -71,46 +184,33 @@ networks:
 
 ### 2. Reverse Proxy Pattern
 
-**Definición**  
-Un servidor intermediario (NGINX) se sitúa entre los clientes externos y los servicios internos. Los clientes nunca acceden directamente al backend.
-
-**Implementación**  
-NGINX actúa como único punto de entrada público, enrutando por path:
-
-| Path público | Servicio interno | Puerto interno |
-|---|---|---|
-| `/auth/*` | auth-service | 8001 |
-| `/users/*` | user-service | 8000 |
-| `/products/*` | product-service | 8003 |
-| `/orders/*` | order-service | 8004 |
-| `/ai/*` | ai-service | 8005 |
+NGINX actúa como punto único de entrada. Los clientes nunca conocen la topología interna ni los puertos reales de los microservicios.
 
 ```nginx
+# api-gateway/shared.conf
+location /orders/ {
+    rewrite ^/orders/(.*) /api/v1/orders/$1 break;
+    proxy_pass http://order-service:8004;
+}
+
 location /ai/ {
-    set $upstream_ai "ai-service";
-    proxy_pass http://$upstream_ai:8005;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    rewrite ^/ai/(.*) /api/v1/$1 break;
+    proxy_pass http://ai-service:8005;
+    proxy_read_timeout 60s;
+    limit_req zone=ai_zone burst=5 nodelay;
 }
 ```
 
-**Beneficio:** Oculta la topología interna, centraliza CORS, headers de seguridad y SSL termination en un solo punto.
+CORS, headers de seguridad (`X-Frame-Options`, `X-Content-Type-Options`, HSTS) y SSL Termination se gestionan en un único lugar.
 
 ---
 
-### 3. Secure Channel Pattern
+### 3. Secure Channel Pattern (TLS/HTTPS)
 
-**Definición**  
-Protege los datos en tránsito estableciendo un canal cifrado mediante TLS/HTTPS, previniendo eavesdropping y tampering.
-
-**Implementación**  
-TLS configurado en NGINX con certificado autofirmado (RSA 2048, CN=localhost):
-
-- Puerto `8000` → redirige con `301` a HTTPS
-- Puerto `8443` → HTTPS con TLS 1.2/1.3
+Todo el tráfico externo viaja cifrado. HTTP queda bloqueado con redirección 301.
 
 ```nginx
+# api-gateway/nginx.conf
 server {
     listen 8000;
     return 301 https://$host:8443$request_uri;
@@ -126,267 +226,176 @@ server {
 }
 ```
 
-**Beneficio:** Todo el tráfico entre clientes y el gateway viaja cifrado. HTTP queda bloqueado por redirección forzada.
+---
+
+### 4. Saga Pattern (coreografía)
+
+El flujo de confirmación de stock entre Order Service y Product Service se implementa como una saga coreográfica sobre RabbitMQ. No hay orquestador central — cada servicio reacciona a los eventos del otro.
+
+```
+POST /orders/
+    │
+    ▼ publica ORDER_CREATED
+[commerce.saga exchange — topic]
+    │
+    ▼ ProductSagaConsumer
+  lock pesimista sobre stock (with_for_update)
+  crea StockReservation
+  publica STOCK_RESERVED / STOCK_UNAVAILABLE
+    │
+    ▼ OrderSagaConsumer
+  transiciona orden → confirmed / cancelled
+```
+
+La idempotencia se garantiza con la tabla `processed_events` (PK `event_id`) en ambos servicios. Si NGINX entrega el evento dos veces, el segundo intento es ignorado silenciosamente.
+
+```python
+# order_service/src/events/consumer.py
+existing = db.query(ProcessedEvent).filter_by(event_id=event_id).first()
+if existing:
+    return   # evento ya procesado
+```
+
+**Archivos clave:** `order_service/src/events/`, `product_service/src/events/`, `order_service/src/schemas/events.py::build_envelope`
 
 ---
 
-## Rate Limiting (AI Service)
+### 5. Cold-Spare Redundancy (auth-service)
 
-El AI Service consume un modelo LLM externo (Groq), haciendo cada request costoso en tiempo y dinero. Se implementó una doble capa de rate limiting:
+El servicio de autenticación tiene una réplica spare (apagada) y un watchdog que la activa automáticamente ante fallos del primario.
 
-### Capa 1 — NGINX (por IP)
+```
+spare-coordinator  ──(GET /health cada 3s)──▶  auth-service :8001 (active)
+        │
+        └──(POST /activate, tras 3 fallos)──▶  auth-service-cold :8002 (spare)
+```
+
+```nginx
+# api-gateway/nginx.conf
+upstream auth_backend {
+    server ecommerce_auth_service:8001      max_fails=2 fail_timeout=5s;
+    server ecommerce_auth_service_cold:8002 backup;
+}
+```
+
+NGINX detecta el fallo del primario de forma independiente y redirige al backup. El coordinator activa la réplica para que esté lista.
+
+**Archivos clave:** `coordinator/coordinator.py`, `backend/auth_service/main.py` (endpoint `/activate` + variable `CURRENT_ROLE`)
+
+---
+
+### 6. Rate Limiting de doble capa (AI Service)
+
+El AI Service llama a un LLM externo (Groq) con costo por request. Se implementaron dos capas independientes:
+
+**Capa 1 — NGINX (por IP):** 2 req/s con burst de 5, responde 429 antes de llegar al servicio.
 
 ```nginx
 limit_req_zone $binary_remote_addr zone=ai_zone:10m rate=2r/s;
 
 location /ai/ {
-    limit_req        zone=ai_zone burst=5 nodelay;
+    limit_req zone=ai_zone burst=5 nodelay;
     limit_req_status 429;
 }
 ```
 
-### Capa 2 — Redis Sliding Window (por usuario o IP)
+**Capa 2 — Redis Sliding Window (por usuario JWT o IP):** 10 req/60 s. Fail-open si Redis no está disponible (no bloquea el servicio).
 
-Middleware en `src/core/rate_limit.py`:
-- **Límite:** 10 requests por ventana de 60 segundos
-- **Identificador:** JWT `sub` (usuario autenticado) o IP como fallback
-- **Algoritmo:** Sliding window con sorted sets de Redis
+```python
+# backend/AI_service/src/core/rate_limit.py
+# Sorted sets de Redis — ventana deslizante
+await redis.zremrangebyscore(key, 0, now - window_seconds)
+count = await redis.zcard(key)
+if count >= limit:
+    raise HTTPException(status_code=429, ...)
+```
+
+Headers de respuesta: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `Retry-After` (solo en 429).
+
+---
+
+## Estrategias de diseño
+
+| Estrategia | Descripción | Archivos |
+|---|---|---|
+| **Database-per-service** | 4 instancias Postgres completamente aisladas. Ningún servicio puede acceder a la BD de otro directamente | `docker-compose.yml` |
+| **Event-driven (RabbitMQ)** | Registro de usuarios (AUTH_USER_REGISTERED), saga de stock y eventos de orden viajan por exchanges desacoplados | `*/src/events/` |
+| **Idempotencia de eventos** | Tabla `processed_events` con PK `event_id` en order y product service. Previene doble procesamiento en redelivery | `order_service/src/models/`, `product_service/src/models/processed_event.py` |
+| **Lock pesimista en stock** | `SELECT ... FOR UPDATE` al reservar stock impide race conditions bajo concurrencia | `product_service/src/events/consumer.py` |
+| **Cache Redis cross-service** | Product service cachea nombre de seller (vía user-service) y nombre de categoría con TTL 900 s | `product_service/src/services/product_service.py` |
+| **Timeout automático de órdenes** | Worker async cancela órdenes que llevan más de 30 s en `pending_stock_confirmation` | `order_service/src/services/timeout_worker.py` |
+| **Fail-open en rate limiter** | Si Redis no responde, el middleware AI permite el request (disponibilidad > protección) | `AI_service/src/core/rate_limit.py` |
+
+---
+
+## Estructura del repositorio
 
 ```
-X-RateLimit-Limit: 10
-X-RateLimit-Remaining: 7
-X-RateLimit-Reset: 1748823600
-Retry-After: 60  (solo en respuestas 429)
+ecommerce-project/
+├── api-gateway/           NGINX: nginx.conf, shared.conf, certs/
+├── backend/
+│   ├── AI_service/        Chat AI: Groq, rate limiting, historial Redis
+│   ├── auth_service/      Autenticación: JWT, bcrypt, cold-spare endpoint
+│   ├── order_service/     Órdenes: saga consumer/publisher, timeout worker
+│   ├── product_service/   Catálogo: saga, reservas de stock, galería
+│   ├── user-service/      Perfiles: consumer de eventos RabbitMQ
+│   └── tests/             Tests de integración (pytest-asyncio)
+├── coordinator/           Watchdog Python para failover del auth-service
+├── docs/
+│   ├── architecture/      4 diagramas PlantUML + PNG (vistas C&C, Deployment, etc.)
+│   ├── lab4/              Lab 4: Reverse Proxy Pattern (README + C&C.png)
+│   └── lab 5/             Lab 5: Security Patterns + JMeter (README + .jmx + results/)
+├── frontend/              Next.js 14: App Router, SSR, ChatWidget, middleware
+├── rabbitmq/              rabbitmq.conf
+├── generate_certs.sh      Genera TLS con mkcert o openssl
+└── docker-compose.yml
 ```
 
 ---
 
-## Evidencias de Funcionamiento
+## Testing
 
-### Secure Channel — Redirección HTTP → HTTPS
+Los tests son de integración y requieren el stack levantado. Se ejecutan con `pytest-asyncio` y clientes `httpx` async, uno por servicio.
 
 ```bash
-$ curl -I http://localhost:8000/health
+cd backend/tests
+pip install -r requirements.txt
 
-HTTP/1.1 301 Moved Permanently
-Location: https://localhost:8443/health
-Server: nginx/1.27.5
+pytest                              # todos los tests
+pytest -m auth                      # por marcador: auth, user, product, order, ai
+pytest -m integration               # tests de flujo cross-servicio
+pytest test_order_product_integration.py::test_nombre   # test individual
 ```
 
-### Reverse Proxy + HTTPS funcionando
-
-```bash
-$ curl -k https://localhost:8443/health
-
-{"status":"ok","service":"api-gateway"}
-```
-
-### Rate Limiting activado (requests en paralelo)
-
-```bash
-$ for i in {1..10}; do
-    curl -k -s -o /dev/null -w "%{http_code}\n" \
-    -X POST https://localhost:8443/ai/chat/ \
-    -H "Content-Type: application/json" \
-    -d '{"message":"test"}' &
-  done; wait
-
-200  200  200  200  200  429  429  429  429  429
-```
+> El frontend no tiene suite de tests automatizados.
 
 ---
 
-## Pruebas de Carga — JMeter
+## Labs entregados
 
-**Herramienta:** Apache JMeter 5.6.3  
-**Target:** `https://localhost:8443/ai/chat/`  
-**Plan de pruebas:** `lab5_ai_load_test_v2.jmx`
+### Lab 4 — Reverse Proxy Pattern
 
-Se ejecutaron 8 escenarios divididos en dos fases: con y sin rate limiting activo.
+Implementación de NGINX como reverse proxy centralizado sobre el sistema de microservicios. Se documentó la vista de Componentes & Conectores del sistema completo con las 5 rutas de servicio, conexiones a bases de datos individuales, RabbitMQ, Redis y la API de Groq.
 
----
-
-### FASE 1 — CON Rate Limiting
-
-#### Escenario 1 — Normal Traffic
-**Configuración:** 2 usuarios, 5 iteraciones, timer de 2s entre requests, ramp-up 5s
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 10 |
-| Average (ms) | 671 |
-| Min (ms) | 2 |
-| Max (ms) | 6682 |
-| Error % | 90% (429s) |
-| Throughput | 40.8/min |
-
-**Interpretación:** Incluso con tráfico liviano y espaciado, el rate limit de NGINX (2r/s burst 5) bloquea la mayoría de requests porque los 2 usuarios comparten la misma IP.
+→ [Documentación detallada del Lab 4](docs/lab4/README.md) · [Diagrama C&C](docs/lab4/C%26C.png)
 
 ---
 
-#### Escenario 2 — Baseline
-**Configuración:** 5 usuarios, 10 iteraciones, ramp-up 1s
+### Lab 5 — Security Patterns + Rate Limiting
 
-| Métrica | Valor |
-|---|---|
-| Total Samples | 50 |
-| Average (ms) | 183 |
-| Min (ms) | 0 |
-| Max (ms) | 6762 |
-| Error % | 94% (429s) |
-| Throughput | 5.6/sec |
+Implementación de tres patrones de seguridad (Network Segmentation, Reverse Proxy, Secure Channel/TLS) complementados con rate limiting de doble capa (NGINX + Redis sliding window) sobre el AI Service. Validado con 8 escenarios de pruebas de carga en Apache JMeter — los resultados demuestran que con rate limiting NGINX bloquea ataques en 1–183 ms con 0% de carga al LLM, frente a tiempos de 9–12 s sin protección.
 
-**Interpretación:** Con 5 usuarios el rate limit se activa casi inmediatamente. Solo los primeros requests dentro del burst de 5 pasan.
-
----
-
-#### Escenario 3 — Burst
-**Configuración:** 20 usuarios simultáneos, 5 iteraciones, ramp-up 0s
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 100 |
-| Average (ms) | 63 |
-| Min (ms) | 1 |
-| Max (ms) | 1686 |
-| Error % | 94% (429s) |
-| Throughput | 35.6/sec |
-
-**Interpretación:** NGINX responde en 63ms promedio — bloquea casi todo antes de llegar al LLM, protegiendo el backend completamente.
-
----
-
-#### Escenario 4 — Sustained
-**Configuración:** 15 usuarios, 20 iteraciones, ramp-up 60s
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 280 |
-| Average (ms) | 1 |
-| Min (ms) | 0 |
-| Max (ms) | 27 |
-| Error % | 100% (429s) |
-| Throughput | 5.4/sec |
-
-**Interpretación:** Bajo carga sostenida NGINX bloquea el 100% en ~1ms. El sistema permanece completamente estable.
-
----
-
-### FASE 2 — SIN Rate Limiting
-
-#### Escenario 5 — Normal Traffic
-**Configuración:** idéntica al escenario 1
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 7 |
-| Average (ms) | 9541 |
-| Min (ms) | 4685 |
-| Max (ms) | 12639 |
-| Error % | 0% |
-| Throughput | 10.5/min |
-
----
-
-#### Escenario 6 — Baseline
-**Configuración:** idéntica al escenario 2
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 26 |
-| Average (ms) | 10825 |
-| Min (ms) | 1279 |
-| Max (ms) | 15646 |
-| Error % | 0% |
-| Throughput | 25.4/min |
-
----
-
-#### Escenario 7 — Burst
-**Configuración:** idéntica al escenario 3
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 100 |
-| Average (ms) | 10587 |
-| Min (ms) | 420 |
-| Max (ms) | 15528 |
-| Error % | 0% |
-| Throughput | 1.5/sec |
-
----
-
-#### Escenario 8 — Sustained
-**Configuración:** idéntica al escenario 4
-
-| Métrica | Valor |
-|---|---|
-| Total Samples | 84 |
-| Average (ms) | 11943 |
-| Min (ms) | 668 |
-| Max (ms) | 15663 |
-| Error % | 0% |
-| Throughput | 51.0/min |
-
----
-
-## Comparativa Final CON vs SIN Rate Limiting
-
-| Escenario | Error % CON RL | Error % SIN RL | Avg ms CON RL | Avg ms SIN RL |
-|---|---|---|---|---|
-| Normal Traffic | 90% | 0% | 671 | 9541 |
-| Baseline | 94% | 0% | 183 | 10825 |
-| Burst | 94% | 0% | 63 | 10587 |
-| Sustained | 100% | 0% | 1 | 11943 |
-
-### Conclusiones
-
-**Sin rate limiting** todos los requests llegan al LLM con tiempos de respuesta de 9-12 segundos y 0% de errores. El servicio responde correctamente pero queda completamente expuesto a abuso.
-
-**Con rate limiting** NGINX bloquea la mayoría con `429` en 1-183ms — protege el LLM de sobrecarga y controla costos. El tiempo de respuesta bajo porque NGINX rechaza sin consultar el backend.
-
-**Trade-off:** El rate limiting sacrifica disponibilidad para usuarios que superan el límite a cambio de proteger el backend, garantizar estabilidad del sistema y controlar costos del LLM.
-
-> **Nota:** Los "errores" en JMeter son respuestas `429 Too Many Requests` — comportamiento **esperado y correcto** del rate limiter, no fallos del sistema.
-
----
-
-## Estructura de Archivos
-
-```
-docs/lab5/
-├── README.md
-├── Deployment_Lab5.puml
-├── Component_Connectors_Lab5.puml
-├── lab5_ai_load_test_v2.jmx
-└── results/
-    ├── con_rl_normal_results.csv
-    ├── con_rl_baseline_results.csv
-    ├── con_rl_burst_results.csv
-    ├── con_rl_sustained_results.csv
-    ├── sin_rl_normal_results.csv
-    ├── sin_rl_baseline_results.csv
-    ├── sin_rl_burst_results.csv
-    └── sin_rl_sustained_results.csv
-
-api-gateway/
-├── nginx.conf
-└── certs/
-    ├── nginx.crt
-    └── nginx.key
-
-backend/AI_service/src/core/
-├── rate_limit.py
-├── settings.py
-└── redis_client.py
-```
+→ [Documentación completa del Lab 5 con tablas JMeter](docs/lab%205/README.md)
 
 ---
 
 ## Referencias
 
 - [NGINX Rate Limiting](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html)
-- [TLS/SSL NGINX Configuration](https://nginx.org/en/docs/http/configuring_https_servers.html)
-- [Docker Network Segmentation](https://docs.docker.com/network/)
+- [NGINX TLS/SSL Configuration](https://nginx.org/en/docs/http/configuring_https_servers.html)
+- [Docker Network Drivers](https://docs.docker.com/network/)
+- [RabbitMQ Topic Exchanges](https://www.rabbitmq.com/tutorials/tutorial-five-python)
 - [Redis Sorted Sets](https://redis.io/docs/data-types/sorted-sets/)
+- [Saga Pattern — Chris Richardson](https://microservices.io/patterns/data/saga.html)
+- [Groq API](https://console.groq.com/docs)
 - [Apache JMeter](https://jmeter.apache.org/)

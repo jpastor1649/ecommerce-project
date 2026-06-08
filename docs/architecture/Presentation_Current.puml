@@ -2,16 +2,21 @@
 !theme plain
 skinparam componentStyle rectangle
 skinparam shadowing false
+skinparam defaultFontSize 10
 left to right direction
 
-title Presentation View - Frontend Layered Structure (Current, Next.js)
+title Vista de Presentación — Frontend Next.js 14 App Router (Jun 2026)
 
-actor "Authenticated User" as User
+actor "Usuario\n(autenticado)" as User
 
 package "frontend/src" {
-  package "app" {
-    component "layout.js + page.js\n(auth entry routes)" as AppRoot
-    component "dashboard/layout.js\n(shell + SSR viewer preload)" as DashboardLayout
+
+  component "middleware.js\n(route guards:\n/dashboard/* → / sin token\n/ y /register → /dashboard si autenticado)" as Middleware
+
+  package "app/ (App Router)" {
+    component "layout.js + page.js\n(root: → LoginPage)" as AppRoot
+    component "register/page.js\n(→ RegisterPage)" as RouteRegister
+    component "dashboard/layout.js\n(SSR /auth/me via API_SERVER_URL)" as DashboardLayout
     component "dashboard/products/page.js" as RouteProducts
     component "dashboard/products/[productId]/page.js" as RouteProductDetail
     component "dashboard/orders/page.js" as RouteOrders
@@ -19,67 +24,66 @@ package "frontend/src" {
     component "dashboard/profile/page.js" as RouteProfile
   }
 
-  package "widgets" {
-    component "DashboardLayout.jsx" as DashboardWidget
+  package "widgets/dashboard" {
+    component "DashboardLayout.jsx\n(shell de navegación)" as DashboardWidget
+    component "ChatWidget.jsx\n(chat IA, POST /ai/chat/)" as ChatWidget
   }
 
-  package "pages/auth" {
-    component "LoginPage.jsx" as Login
-    component "RegisterPage.jsx" as Register
-  }
-
-  package "pages/catalog" {
-    component "ProductCatalogPage.jsx" as Catalog
-    component "ProductDetailPage.jsx" as Detail
-  }
-
-  package "pages/seller" {
-    component "MyProductsPage.jsx" as MyProducts
-  }
-
-  package "pages/profile" {
-    component "UserProfilePage.jsx" as Profile
-  }
-
-  package "pages/orders" {
-    component "OrdersPage.jsx" as Orders
+  package "components/ + pages/ (feature screens)" {
+    component "auth/LoginPage\nauth/RegisterPage" as AuthPages
+    component "catalog/ProductCatalogPage\ncatalog/ProductDetailPage" as CatalogPages
+    component "seller/MyProductsPage" as SellerPages
+    component "orders/OrdersPage" as OrderPages
+    component "profile/UserProfilePage" as ProfilePages
   }
 
   package "shared" {
-    component "config/api.js" as ApiConfig
-    component "lib/auth.js" as AuthLib
+    component "config/api.js\n(NEXT_PUBLIC_API_URL)" as ApiConfig
+    component "lib/auth.js\n(cookie auth_token SameSite=Strict)" as AuthLib
+    component "lib/http.js\n(fetchWithGatewayRetry\nbackoff 500ms × 3)" as HttpLib
+    component "utils/api.js\n(fetchJson, fetchJsonWithAuth\nfetchUserLabel, fetchUserLabels)" as ApiUtils
+    component "hooks/\n(useProductDetail, useProfileForm,\nuseAddressForm, useProductActivity,\nuseFormHandler, useUserProfile)" as Hooks
   }
 }
 
-component "API Gateway\n(http://localhost:8000)" as Gateway
+component "API Gateway\nhttps://localhost:8443\n(CSR)\nhttp://api-gateway:8000\n(SSR interno)" as Gateway
 
-User --> AppRoot : Browser navigation
-AppRoot --> Login : /
-AppRoot --> Register : /register
-AppRoot --> DashboardLayout : /dashboard/*
+User --> Middleware : navegación browser
+Middleware --> AppRoot
 
-DashboardLayout --> DashboardWidget : page shell
+AppRoot --> AuthPages         : /
+AppRoot --> RouteRegister     : /register
+AppRoot --> DashboardLayout   : /dashboard/*
+
+DashboardLayout --> DashboardWidget
+DashboardWidget --> ChatWidget
 DashboardLayout --> RouteProducts
 DashboardLayout --> RouteProductDetail
 DashboardLayout --> RouteOrders
 DashboardLayout --> RouteMyProducts
 DashboardLayout --> RouteProfile
 
-RouteProducts --> Catalog
-RouteProductDetail --> Detail
-RouteOrders --> Orders
-RouteMyProducts --> MyProducts
-RouteProfile --> Profile
+RouteProducts --> CatalogPages
+RouteProductDetail --> CatalogPages
+RouteOrders --> OrderPages
+RouteMyProducts --> SellerPages
+RouteProfile --> ProfilePages
 
-AppRoot --> AuthLib : cookie/token helpers
-Login --> ApiConfig
-Register --> ApiConfig
-Catalog --> ApiConfig
-Detail --> ApiConfig
-MyProducts --> ApiConfig
-Profile --> ApiConfig
-Orders --> ApiConfig
+AuthPages --> HttpLib
+CatalogPages --> HttpLib
+SellerPages --> HttpLib
+OrderPages --> HttpLib
+ProfilePages --> HttpLib
+ChatWidget --> HttpLib
 
-ApiConfig --> Gateway : REST requests
+HttpLib --> ApiConfig
+HttpLib --> ApiUtils
+HttpLib --> AuthLib
+Hooks --> ApiUtils
+Hooks --> AuthLib
+
+ApiConfig --> Gateway
+ApiUtils --> Gateway
+DashboardLayout --> Gateway : SSR (API_SERVER_URL)
 
 @enduml

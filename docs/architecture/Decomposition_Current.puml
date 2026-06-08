@@ -2,98 +2,116 @@
 !theme plain
 skinparam componentStyle rectangle
 skinparam shadowing false
+skinparam defaultFontSize 10
 left to right direction
 
-title Decomposition View - Current Implementation (Apr 2026)
+title Vista de Descomposición — AICart (Jun 2026)
 
 package "ecommerce-project" {
-  package "frontend (Next.js 14)" {
-    component "app\n(route entrypoints + SSR)" as FEApp
-    component "pages\n(client feature screens)" as FEPages
-    component "widgets\n(composed dashboard UI)" as FEWidgets
-    component "shared\n(config + auth + helpers)" as FEShared
 
-    FEApp --> FEPages : route composition
-    FEPages --> FEWidgets : UI composition
-    FEWidgets --> FEShared : shared libs/config
+  package "frontend (Next.js 14)" {
+    component "app/\n(rutas SSR + layouts)" as FEApp
+    component "widgets/\n(DashboardLayout\nChatWidget)" as FEWidgets
+    component "components/ + pages/\n(pantallas por feature)" as FEPages
+    component "shared/\n(config, lib/auth,\nlib/http, hooks, utils)" as FEShared
+    component "middleware.js\n(route guards)" as FEMiddleware
+
+    FEApp --> FEPages    : composición de rutas
+    FEApp --> FEWidgets  : shell de dashboard
     FEPages --> FEShared : API client + auth helpers
+    FEWidgets --> FEShared
+    FEMiddleware --> FEShared : cookie auth_token
+  }
+
+  package "api-gateway (Nginx)" {
+    component "nginx.conf\n(upstream, rate-limit zones,\nHTTP→HTTPS)" as NGConf
+    component "shared.conf\n(routing, CORS, security headers)" as NGShared
+  }
+
+  package "coordinator" {
+    component "coordinator.py\n(watchdog polling /health,\nPOST /activate en fallo)" as Coord
   }
 
   package "backend" {
-    package "auth-service" {
-      component "routers" as AuthRouters
-      component "services" as AuthServices
-      component "models/schemas" as AuthDomain
-      component "core" as AuthCore
+
+    package "auth_service" {
+      component "routers/auth.py" as AuthRouters
+      component "services/auth_service.py" as AuthServices
+      component "models/ + schemas/" as AuthDomain
+      component "core/ (JWT, bcrypt,\nRedis, DB, settings)" as AuthCore
+      component "events/publisher.py\n(AUTH_USER_REGISTERED)" as AuthEvents
 
       AuthRouters --> AuthServices
       AuthServices --> AuthDomain
       AuthServices --> AuthCore
+      AuthServices --> AuthEvents
     }
 
     package "user-service" {
-      component "routers" as UserRouters
-      component "services" as UserServices
-      component "models/schemas" as UserDomain
-      component "core/events" as UserCore
+      component "routers/router.py" as UserRouters
+      component "services/services.py" as UserServices
+      component "models/ + schemas/" as UserDomain
+      component "core/ (DB, settings)" as UserCore
+      component "events/user_profile_consumer.py\n(pika thread)" as UserEvents
 
       UserRouters --> UserServices
       UserServices --> UserDomain
       UserServices --> UserCore
+      UserEvents --> UserServices : perfil creado
     }
 
-    package "product-service" {
-      component "routers" as ProductRouters
-      component "services" as ProductServices
-      component "models/schemas" as ProductDomain
-      component "core" as ProductCore
+    package "product_service" {
+      component "routers/\n(products, internal_inventory)" as ProductRouters
+      component "services/\n(product, category,\nimage_gallery, review)" as ProductServices
+      component "models/ + schemas/" as ProductDomain
+      component "core/ (DB, Redis, settings)" as ProductCore
+      component "events/\n(ProductSagaConsumer\nSagaEventPublisher)" as ProductEvents
 
       ProductRouters --> ProductServices
       ProductServices --> ProductDomain
       ProductServices --> ProductCore
+      ProductEvents --> ProductServices : saga stock
     }
 
-    package "order-service" {
-      component "routers" as OrderRouters
-      component "services" as OrderServices
-      component "models/schemas" as OrderDomain
-      component "core/events" as OrderCore
+    package "order_service" {
+      component "routers/orders.py" as OrderRouters
+      component "services/\n(order_service,\nproduct_client,\ntimeout_worker)" as OrderServices
+      component "models/ + schemas/\n(OrderStatus enum,\nbuild_envelope)" as OrderDomain
+      component "core/ (DB, settings)" as OrderCore
+      component "events/\n(OrderSagaConsumer\nSagaEventPublisher)" as OrderEvents
 
       OrderRouters --> OrderServices
       OrderServices --> OrderDomain
       OrderServices --> OrderCore
+      OrderEvents --> OrderServices : saga confirmación
     }
-  }
 
-  package "platform connectors" {
-    component "api-gateway\n(Nginx)" as Gateway
-    database "auth-postgres" as AuthPg
-    database "user-postgres\n(shared with product-service)" as UserPg
-    database "order-postgres" as OrderPg
-    database "Redis" as Redis
-    queue "RabbitMQ" as MQ
+    package "AI_service" {
+      component "routers/chat.py" as AIRouters
+      component "services/\n(Ai_service,\nconversation_memory,\nprice_extractor,\nproduct_client,\nuser_client)" as AIServices
+      component "core/\n(RateLimitMiddleware,\nRedis, settings, security)" as AICore
+
+      AIRouters --> AIServices
+      AIServices --> AICore
+    }
   }
 }
 
-FEApp --> Gateway : REST
-Gateway --> AuthRouters : /auth/*
-Gateway --> UserRouters : /users/*, /internal/*
-Gateway --> ProductRouters : /products/*
-Gateway --> OrderRouters : /orders/*
+' Conexiones inter-paquete
+FEApp --> NGConf : REST HTTPS
 
-AuthCore --> AuthPg : auth DB
-AuthCore --> Redis : sessions/blacklist
-AuthCore --> MQ : publish events
+NGConf --> AuthRouters    : /auth/*
+NGConf --> UserRouters    : /users/*, /internal/*
+NGConf --> ProductRouters : /products/*
+NGConf --> OrderRouters   : /orders/*
+NGConf --> AIRouters      : /ai/*
 
-UserCore --> UserPg : user DB
-UserCore --> MQ : consume events
-
-ProductCore --> UserPg : product DB tables
-ProductCore --> Redis : token/cache
-ProductServices --> UserServices : seller lookup (HTTP)
-
-OrderCore --> OrderPg : order DB
-OrderCore --> MQ : publish order events
-OrderServices --> ProductServices : stock info / reserve / release
+Coord --> AuthCore : watchdog
+AuthEvents --> UserEvents : RabbitMQ (AUTH_USER_REGISTERED)
+ProductEvents --> OrderEvents : RabbitMQ (commerce.saga)
+OrderEvents --> ProductEvents : RabbitMQ (commerce.saga)
+OrderServices --> ProductRouters : HTTP /internal/products/*
+AIServices --> UserRouters    : HTTP /users/*
+AIServices --> ProductRouters : HTTP /products/*
 
 @enduml
