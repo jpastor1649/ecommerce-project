@@ -415,7 +415,10 @@ git push -u origin feature/nombre-corto
 
 | # | Nombre |
 |---|---|
-| 1 | John Alejandro Pastor Sandoval |
+| 1 | Sara Isabel Ospina Valderrama |
+| 2 | Andrés Felipe Perdomo Uruburu |
+| 3 | Juan David Castañeda Cárdenas |
+| 4 | John Alejandro Pastor Sandoval |
 
 ---
 
