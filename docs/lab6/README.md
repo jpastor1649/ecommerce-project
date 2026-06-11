@@ -67,7 +67,7 @@ El siguiente diagrama muestra cómo el `auth-service` fue desplegado como un Kub
 ```
 ### 2.2 Cold Cold Redundancy - Vista de Componentes y conectores
 
-![Vista de Componentes y Conectores](img/CyCLab6.drawio.png)
+![Vista de Componentes y Conectores](img/CyCLab6.png)
 ---
 
 ## 3. Guía Técnica — Parte A: Cluster Pattern
