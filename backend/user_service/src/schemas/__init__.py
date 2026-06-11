@@ -1,6 +1,6 @@
 """Pydantic schemas for user-service."""
 
-from src.schemas.schemas import (
+from user_service.src.schemas.schemas import (
     AddressCreate,
     AddressResponse,
     ProfileCreate,
