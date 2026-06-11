@@ -67,7 +67,7 @@ El siguiente diagrama muestra cómo el `auth-service` fue desplegado como un Kub
 ```
 ### 2.2 Cold Cold Redundancy - Vista de Componentes y conectores
 
-![Vista de Componentes y Conectores](img/CyCLab6.png)
+![Vista de Componentes y Conectores](CyCLab6.png)
 ---
 
 ## 3. Guía Técnica — Parte A: Cluster Pattern
@@ -272,7 +272,114 @@ El clúster pasó de 2 a 4 réplicas sin interrumpir el servicio.
 
 ---
 
-## 4. Pull Request
+
+## 4. Guía Técnica — Parte B: Redundancy Pattern
+
+### 4.1 Descripción del Escenario de Calidad
+
+| Atributo | Detalle del Escenario |
+| :--- | :--- |
+| **Source** | Múltiples usuarios de la plataforma (carga masiva estimada en 5,000 usuarios concurrentes). |
+| **Stimulus** | Las peticiones concurrentes de registro e inicio de sesión saturan el servicio de autenticación principal (`auth_service`), provocando una caída total del proceso (crash) y la indisponibilidad del servicio. |
+| **Artifact** | El servicio de autenticación (`auth_service`). |
+| **Environment** | Operación pico, donde hay una gran cantidad de usuarios haciendo uso del sistema (fin de semana por la tarde). |
+| **Response** | El sistema detecta la caída del `auth_service` en un tiempo menor a 20 segundos y activa la *cold spare* del servicio en menos de un minuto. |
+| **Response measure** | El tiempo de reacción a la hora de identificar el fallo debe ser de segundos y menor al límite acordado. El tiempo que tarda en activar la copia se debe medir en segundos y no debe superar el minuto (60 segundos). |
+
+### 4.2 Descripción del Patrón
+
+El patrón utilizado fue **Cold Redundancy (Redundancia Fría)**, el cual consiste en mantener una copia inactiva de uno de los servicios (`auth_service`). En el momento en que la instancia principal falle, el evento es detectado por un componente denominado **Spare Coordinator**, encargado de inicializar y activar la *cold spare* para restaurar el funcionamiento del sistema.
+
+En nuestra arquitectura, el `auth-service` es **stateless** (no almacena ningún tipo de estado local ni información intermedia, delegando la persistencia a las bases de datos PostgreSQL y las sesiones a Redis). Por esta razón, no fue necesaria la implementación de un sistema de sincronización por *checkpoints*.
+
+### 4.3 Pasos de Implementación
+
+Para llevar a cabo la implementación de la redundancia fría se realizó la siguiente secuencia de pasos:
+
+1. **Modificar el archivo `docker-compose.yml`:** Asignar una variable de entorno de rol con valor `active` al contenedor principal del `auth_service`.
+2. **Crear el contenedor `auth-service-cold`:** Configurar esta instancia de manera casi idéntica al servicio activo, pero asignándole el rol de `spare` y mapeándolo a un puerto de escucha distinto.
+3. **Desarrollar el Coordinador (`spare-coordinator`):** Diseñar un script/servicio encargado de ejecutar *health checks* continuos sobre el contenedor de autenticación activo utilizando comandos y sockets de Docker.
+4. **Implementar el contenedor del coordinador:** Añadir el servicio al archivo de orquestación dándole visibilidad sobre el socket de Docker del host (`/var/run/docker.sock`).
+5. **Modificar el endpoint de Health:** Asegurar que el path `/health` del `auth_service` refleje correctamente el estado real de sus conexiones internas.
+6. **Manejo dinámico de Roles:** Agregar lógica al servicio para responder adecuadamente según el rol configurado (`active` o `spare`).
+
+### 4.4 Snippets de Configuración (Docker Compose)
+
+A continuación se muestra la declaración de los contenedores agregados y modificados en el ecosistema de desarrollo:
+
+```yaml
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: auth_service/Dockerfile
+    container_name: ecommerce_auth_service
+    restart: unless-stopped
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${AUTH_DATABASE_URL}
+      APP_NAME: ${AUTH_APP_NAME:-Auth Service Active}
+      ROLE: active
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    command: uvicorn auth_service.main:app --host 0.0.0.0 --port 8001
+
+  auth-service-cold:
+    build:
+      context: ./backend
+      dockerfile: auth_service/Dockerfile
+    container_name: ecommerce_auth_service_cold
+    restart: unless-stopped
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${AUTH_DATABASE_URL}
+      APP_NAME: ${AUTH_APP_NAME:-Auth Service Cold Backup}
+      ROLE: spare
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    command: uvicorn auth_service.main:app --host 0.0.0.0 --port 8002
+
+  spare-coordinator:
+    build:
+      context: ./coordinator
+      dockerfile: Dockerfile
+    container_name: ecommerce_spare_coordinator
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      auth-service:
+        condition: service_started
+```
+
+### 4.5 Evidencia de Failover
+
+Para este paso se desactivo el contenedor del `auth_service` para verificar como el coordinador lo maneja, al desactivar el servicio el coordinador nos muestra los siguientes mensajes dentro del log:
+
+```text
+auth-service-cold    | INFO:     172.20.0.14:38862 - "POST /activate HTTP/1.1" 200 OK
+
+spare-coordinator    | [COORDINATOR] Monitoring active service on port 8001...
+                     | [COORDINATOR] Active service unreachable.
+                     | [COORDINATOR] Active service unreachable.
+                     | [COORDINATOR] Active service unreachable.
+                     | [COORDINATOR] Active service down. Triggering failover...
+                     | [COORDINATOR] Spare instance activated successfully.
+```
+Aquí se evidencia cómo cambia el rol del `auth-service-cold` y los mensajes del Coordinador, el coordinador trata de contactar con el servicio tres veces, si en las tres falla entonces activa la cold spare, en la captura se evidencia cada uno de los mensajes demostrando que trató de conectarse al servicio 3 veces, al no recibir respuesta se inicia el proceso para activar la copia de reserva.
+
+### 4.6 Recomendaciones
+Identificar si el servicio guarda algún tipo de información o estado, en caso de guardarla es importante crear una serie de "checkpoints" y asegurar que la copia se active con el último checkpoint guardado.
+
+Si el servicio es propenso a fallar considerar implementar más copias. Si se ve necesario, es mejor implementar otro tipo de patrones (como Passive Redundancy o Active Redundancy).
+
+---
+## 5. Pull Request
 
 > Link al PR: https://github.com/jpastor1649/ecommerce-project/pull/26
 
