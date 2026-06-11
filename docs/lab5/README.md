@@ -354,12 +354,16 @@ Se ejecutaron 8 escenarios divididos en dos fases: con y sin rate limiting activ
 ## Archivos relevantes
 
 ```
-docs/lab 5/
+docs/lab5/
 ├── README.md                     ← este archivo
 ├── Deployment_Lab5.puml
 ├── Component_Connectors_Lab5.puml
+├── lab5_ai_load_test.jmx
 ├── lab5_ai_load_test_v2.jmx
 └── results/
+    ├── baseline_results.csv
+    ├── burst_results.csv
+    ├── sustained_results.csv
     ├── con_rl_normal_results.csv
     ├── con_rl_baseline_results.csv
     ├── con_rl_burst_results.csv
@@ -367,7 +371,11 @@ docs/lab 5/
     ├── sin_rl_normal_results.csv
     ├── sin_rl_baseline_results.csv
     ├── sin_rl_burst_results.csv
-    └── sin_rl_sustained_results.csv
+    ├── sin_rl_sustained_results.csv
+    └── raw/                      ← corridas previas (otra ejecución)
+        ├── baseline_results.csv
+        ├── burst_results.csv
+        └── sustained_results.csv
 
 api-gateway/
 ├── nginx.conf

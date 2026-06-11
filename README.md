@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/AICart.png" alt="AICart — logo oficial" width="400">
+</p>
+
 # 🛒 AICart — Plataforma de E-Commerce con IA
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
@@ -351,7 +355,13 @@ Implementación de NGINX como reverse proxy centralizado. Se documentó la vista
 
 Implementación de tres patrones de seguridad (Network Segmentation, Reverse Proxy, Secure Channel/TLS) con rate limiting de doble capa sobre el AI Service. Validado con 8 escenarios de carga en Apache JMeter — con rate limiting activo NGINX bloquea ataques en 1–183 ms frente a tiempos de 9–12 s sin protección.
 
-→ [Documentación completa del Lab 5 con resultados JMeter](docs/lab%205/README.md)
+→ [Documentación completa del Lab 5 con resultados JMeter](docs/lab5/README.md)
+
+### Lab 6 — Cluster Pattern + Redundancy (Kubernetes)
+
+Despliegue del `auth-service` como Deployment de Kubernetes con 2 réplicas en un clúster local (Minikube), expuesto vía Service NodePort (`:30801`), junto con PostgreSQL y Redis internos. Incluye pruebas de auto-recuperación (self-healing) y escalado horizontal. Manifests en [`k8s/`](k8s/).
+
+→ [Documentación completa del Lab 6](docs/lab6/README.md)
 
 ---
 
@@ -424,8 +434,9 @@ git push -u origin feature/nombre-corto
 
 ## 📚 Documentación Adicional
 
-- **[docs/lab4/](docs/lab4/)** — Lab 4: Reverse Proxy Pattern + diagrama C&C
-- **[docs/lab 5/](docs/lab%205/)** — Lab 5: Security Patterns + resultados JMeter
+- **[docs/lab4/](docs/lab4/)** — Lab 4: Reverse Proxy Pattern + diagrama C&C (oficial)
+- **[docs/lab5/](docs/lab5/)** — Lab 5: Security Patterns + resultados JMeter
+- **[docs/lab6/](docs/lab6/)** — Lab 6: Cluster Pattern con Kubernetes (manifests en [`k8s/`](k8s/))
 - **[docs/architecture/](docs/architecture/)** — Diagramas PlantUML fuente (`.puml`) + PNG
 
 ---
