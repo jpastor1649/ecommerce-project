@@ -192,8 +192,8 @@ services:
 
   user-service:
     build:
-      context: ./backend/user-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: user_service/Dockerfile
     container_name: ecommerce_user_service
     restart: unless-stopped
     depends_on:

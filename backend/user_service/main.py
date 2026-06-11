@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from src.core.db import Base, engine
-from src.events.user_profile_consumer import UserProfileEventConsumer
-from src.routers.router import router
+from user_service.src.core.db import Base, engine
+from user_service.src.events.user_profile_consumer import UserProfileEventConsumer
+from user_service.src.routers.router import router
 
 consumer = UserProfileEventConsumer()
 
