@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
-from product_service.src.models.product import Category, Product, ProductImage
+from product_service.src.models.product import Category, Product, ProductImage, ProductReview
 from product_service.src.models.reservation import StockReservation
 from product_service.src.core.config.settings import settings
 from product_service.src.core.redis_client import get_redis_client
@@ -136,10 +136,31 @@ class ProductService:
                     # Cache the not-found result to avoid repeated HTTP calls.
                     await redis_client.set(cache_key, _SELLER_NOT_FOUND, ex=_SELLER_NOT_FOUND_TTL)
 
+        # Batch-compute average_rating and review_count for all products
+        rating_result = await self.db.execute(
+            select(
+                ProductReview.product_id,
+                func.avg(ProductReview.rating).label("avg_rating"),
+                func.count(ProductReview.id).label("cnt"),
+            )
+            .where(
+                ProductReview.product_id.in_(product_ids),
+                ProductReview.is_active.is_(True),
+            )
+            .group_by(ProductReview.product_id)
+        )
+        rating_by_product: dict[UUID, tuple[float, int]] = {
+            row.product_id: (float(row.avg_rating), int(row.cnt))
+            for row in rating_result
+        }
+
         for product in products:
             setattr(product, "category_name", category_names_by_id.get(product.category_id))
             setattr(product, "seller_display_name", seller_names.get(str(product.seller_user_id)))
             setattr(product, "cover_image_url", cover_by_product.get(product.id))
+            rating_data = rating_by_product.get(product.id)
+            setattr(product, "average_rating", round(rating_data[0], 2) if rating_data else None)
+            setattr(product, "review_count", rating_data[1] if rating_data else 0)
 
         return products
 

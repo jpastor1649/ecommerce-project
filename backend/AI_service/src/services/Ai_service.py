@@ -90,11 +90,17 @@ class AiService:
             description = (product.get("description") or "").strip()
             if len(description) > 140:
                 description = description[:137] + "..."
+            avg_rating = product.get("average_rating")
+            review_count = product.get("review_count") or 0
             details = [f"- {name}"]
             if price is not None:
                 details.append(f"precio: ${price}")
             if stock is not None:
                 details.append(f"stock: {stock}")
+            if avg_rating is not None and review_count > 0:
+                details.append(f"valoración: {avg_rating:.1f}/5 ({review_count} reseñas)")
+            elif review_count == 0:
+                details.append("valoración: sin reseñas aún")
             if description:
                 details.append(description)
             lines.append(" | ".join(details))

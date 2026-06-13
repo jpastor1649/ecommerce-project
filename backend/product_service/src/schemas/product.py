@@ -35,6 +35,8 @@ class ProductResponse(BaseModel):
     category_name: str | None = None
     seller_display_name: str | None = None
     cover_image_url: str | None = None
+    average_rating: float | None = None
+    review_count: int = 0
 
     model_config = {"from_attributes": True}
 

@@ -9,6 +9,7 @@ import ProfileEditForm from './subcomponents/ProfileEditForm'
 import AddressList from './subcomponents/AddressList'
 import AddAddressForm from './subcomponents/AddAddressForm'
 import MyListings from './subcomponents/MyListings'
+import MyPurchases from './subcomponents/MyPurchases'
 import SalesOnListings from './subcomponents/SalesOnListings'
 import MyReviews from './subcomponents/MyReviews'
 import ReviewsReceived from './subcomponents/ReviewsReceived'
@@ -87,6 +88,7 @@ export default function UserProfilePage({ initialData = {} }) {
             {productActivity.loading && <p className="user-panel-state">Loading product activity...</p>}
             {productActivity.warning && <p className="user-panel-warning">{productActivity.warning}</p>}
 
+            <MyPurchases paidOrders={productActivity.myPaidOrders} />
             <MyListings listings={productActivity.myListings} />
             <SalesOnListings
               sales={productActivity.salesOnMyProducts}

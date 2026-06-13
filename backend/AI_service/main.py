@@ -35,6 +35,12 @@ async def lifespan(app: FastAPI):
                 "CREATE INDEX IF NOT EXISTS ix_product_embeddings_embedding_hnsw "
                 "ON product_embeddings USING hnsw (embedding vector_cosine_ops)"
             ))
+            # Add columns introduced after initial schema creation (idempotent).
+            await conn.execute(text(
+                "ALTER TABLE product_embeddings "
+                "ADD COLUMN IF NOT EXISTS average_rating NUMERIC(3,2), "
+                "ADD COLUMN IF NOT EXISTS review_count INTEGER NOT NULL DEFAULT 0"
+            ))
         indexer_task = asyncio.create_task(run_indexer_loop())
     except Exception as exc:
         logger.warning("RAG database unavailable, running keyword-only: %s", exc)

@@ -8,6 +8,7 @@ export function useProductActivity() {
   const [myReviews, setMyReviews] = useState([])
   const [reviewsReceived, setReviewsReceived] = useState([])
   const [salesOnMyProducts, setSalesOnMyProducts] = useState([])
+  const [myPaidOrders, setMyPaidOrders] = useState([])
   const [productLabels, setProductLabels] = useState({})
   const [reviewerLabels, setReviewerLabels] = useState({})
   const [buyerLabels, setBuyerLabels] = useState({})
@@ -49,6 +50,7 @@ export function useProductActivity() {
     setMyReviews([])
     setReviewsReceived([])
     setSalesOnMyProducts([])
+    setMyPaidOrders([])
     setProductLabels({})
     setReviewerLabels({})
     setBuyerLabels({})
@@ -59,12 +61,14 @@ export function useProductActivity() {
         fetchJsonWithAuth(`${API_BASE_URL}/products/mine/reviews-received`),
         fetchJsonWithAuth(`${API_BASE_URL}/products/mine/listings`),
         fetchJsonWithAuth(`${API_BASE_URL}/orders/sales/mine?page=1&page_size=50`),
+        fetchJsonWithAuth(`${API_BASE_URL}/orders/?status=paid&page=1&page_size=50`),
       ])
 
       const authoredReviews = calls[0].status === 'fulfilled' ? calls[0].value : []
       const sellerReviews = calls[1].status === 'fulfilled' ? calls[1].value : []
       const listings = calls[2].status === 'fulfilled' ? calls[2].value : []
       const salesResult = calls[3].status === 'fulfilled' ? calls[3].value : {}
+      const paidOrdersResult = calls[4].status === 'fulfilled' ? calls[4].value : {}
 
       const hasProductFailures = calls.slice(0, 3).some((call) => call.status === 'rejected')
       const hasSalesFailures = calls[3].status === 'rejected'
@@ -82,10 +86,13 @@ export function useProductActivity() {
       const safeSellerReviews = Array.isArray(sellerReviews) ? sellerReviews : []
       const safeSales = Array.isArray(salesResult?.items) ? salesResult.items : []
 
+      const safePaidOrders = Array.isArray(paidOrdersResult?.items) ? paidOrdersResult.items : []
+
       setMyListings(safeListings)
       setMyReviews(safeMyReviews)
       setReviewsReceived(safeSellerReviews)
       setSalesOnMyProducts(safeSales)
+      setMyPaidOrders(safePaidOrders)
 
       const listingLabelMap = Object.fromEntries(
         safeListings.map((product) => [String(product.id), product.name || String(product.id)])
@@ -132,6 +139,7 @@ export function useProductActivity() {
     myReviews,
     reviewsReceived,
     salesOnMyProducts,
+    myPaidOrders,
     productLabels,
     reviewerLabels,
     buyerLabels,

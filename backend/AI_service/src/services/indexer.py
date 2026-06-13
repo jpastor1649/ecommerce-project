@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update as sa_update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..core.config import settings
@@ -64,12 +64,18 @@ async def sync_products_once() -> int:
 
         seen_ids: list[uuid.UUID] = []
         to_upsert: list[dict[str, Any]] = []
+        # Full rating map for all products (used for rating-only updates)
+        all_ratings: dict[uuid.UUID, tuple[float | None, int]] = {}
 
         for product in products:
             product_id = _as_uuid(product.get("id"))
             if product_id is None:
                 continue
             seen_ids.append(product_id)
+
+            avg_r = product.get("average_rating")
+            rc = int(product.get("review_count") or 0)
+            all_ratings[product_id] = (float(avg_r) if avg_r is not None else None, rc)
 
             content_hash = _content_hash(product)
             if existing_hashes.get(product_id) == content_hash:
@@ -85,17 +91,21 @@ async def sync_products_once() -> int:
                     "is_active": bool(product.get("is_active", True)),
                     "category_id": _as_uuid(product.get("category_id")),
                     "category_name": (product.get("category_name") or None),
+                    "average_rating": float(avg_r) if avg_r is not None else None,
+                    "review_count": rc,
                     "content_hash": content_hash,
                     "text": _embedding_text(product),
                 }
             )
 
+        upserted_ids: set[uuid.UUID] = set()
         if to_upsert:
             vectors = await embedding_service.embed_texts([row.pop("text") for row in to_upsert])
             now = datetime.utcnow()
             for row, vector in zip(to_upsert, vectors):
                 row["embedding"] = vector
                 row["indexed_at"] = now
+                upserted_ids.add(row["product_id"])
 
             statement = pg_insert(ProductEmbedding).values(to_upsert)
             statement = statement.on_conflict_do_update(
@@ -104,12 +114,22 @@ async def sync_products_once() -> int:
                     column: getattr(statement.excluded, column)
                     for column in (
                         "name", "description", "price", "stock", "is_active",
-                        "category_id", "category_name", "content_hash",
-                        "embedding", "indexed_at",
+                        "category_id", "category_name", "average_rating",
+                        "review_count", "content_hash", "embedding", "indexed_at",
                     )
                 },
             )
             await session.execute(statement)
+
+        # Update rating fields for products whose content did not change.
+        rating_only_ids = set(existing_hashes.keys()) - upserted_ids
+        for pid in rating_only_ids:
+            avg_r, rc = all_ratings.get(pid, (None, 0))
+            await session.execute(
+                sa_update(ProductEmbedding)
+                .where(ProductEmbedding.product_id == pid)
+                .values(average_rating=avg_r, review_count=rc)
+            )
 
         # Remove products no longer present in the catalog.
         removed_ids = set(existing_hashes) - set(seen_ids)

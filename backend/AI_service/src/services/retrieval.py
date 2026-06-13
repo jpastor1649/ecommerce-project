@@ -77,6 +77,8 @@ async def semantic_search(
                 "price": str(row.price),
                 "stock": row.stock,
                 "category_name": row.category_name,
+                "average_rating": float(row.average_rating) if row.average_rating is not None else None,
+                "review_count": row.review_count or 0,
             }
             for row in rows
         ]

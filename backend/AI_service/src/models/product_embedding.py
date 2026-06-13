@@ -31,6 +31,8 @@ class ProductEmbedding(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     category_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     category_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    average_rating: Mapped[float | None] = mapped_column(Numeric(3, 2), nullable=True)
+    review_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     embedding: Mapped[list[float]] = mapped_column(
         Vector(settings.ai_embedding_dimensions), nullable=False
