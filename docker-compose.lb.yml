@@ -1,0 +1,15 @@
+# Override para activar Load Balancer Pattern (PERF-02)
+# Uso: docker compose -f docker-compose.yml -f docker-compose.lb.yml up -d --build
+#
+# Levanta 2 réplicas de product-service para demostrar escalado horizontal.
+# product-service es stateless: solo lee de product-postgres, no requiere cambios de código.
+#
+# Para que NGINX reparta la carga entre las réplicas, descomentar en nginx.conf:
+#   upstream product_backend { least_conn; server ...-1:8003; server ...-2:8003; }
+# y en shared.conf cambiar:
+#   proxy_pass http://product-service:8003;  →  proxy_pass http://product_backend;
+
+services:
+  product-service:
+    deploy:
+      replicas: 2
