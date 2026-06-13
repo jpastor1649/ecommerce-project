@@ -25,8 +25,8 @@ rectangle "  CAPA 2 — SERVICIOS DE NEGOCIO  " as C2 #FFE5CC/FFD0A0 {
   rectangle "<b>auth-service-cold</b>\nFastAPI · :8002 · spare" as AuthC #FFFAF5/FFF0E0
   rectangle "<b>user-service</b>\nFastAPI · Python 3.11 · :8000\nPerfiles · Direcciones" as User #FFFFFF/FFF8F0
   rectangle "<b>product-service</b>\nFastAPI · Python 3.12 · :8003\nCatálogo · Inventario · Reviews" as Prod #FFFFFF/FFF8F0
-  rectangle "<b>order-service</b>\nFastAPI · Python 3.12 · :8004\nÓrdenes · Saga · Timeout" as Order #FFFFFF/FFF8F0
-  rectangle "<b>ai-service</b>\nFastAPI · Python 3.12 · :8005\nChat · Rate Limit · Groq" as AI #FFFFFF/FFF8F0
+  rectangle "<b>order-service</b>\nFastAPI · Python 3.12 · :8004\nÓrdenes · Saga · Timeout · Pagos" as Order #FFFFFF/FFF8F0
+  rectangle "<b>ai-service</b>\nFastAPI · Python 3.12 · :8005\nChat · Rate Limit · Groq · RAG" as AI #FFFFFF/FFF8F0
   rectangle "<b>spare-coordinator</b>\nPython watchdog\nPolling /health cada 3 s" as Coord #FFFAF5/FFF0E0
 }
 
@@ -39,6 +39,7 @@ rectangle "  CAPA 4 — DATOS  " as C4 #D8F0D8/C0E8C0 {
   rectangle "<b>user-postgres</b>\nPostgreSQL 16 · :5434" as UDB #F0FFF0/E8FFE8
   rectangle "<b>product-postgres</b>\nPostgreSQL 16 · :5435" as PDB #F0FFF0/E8FFE8
   rectangle "<b>order-postgres</b>\nPostgreSQL 16 · :5436" as ODB #F0FFF0/E8FFE8
+  rectangle "<b>ai-postgres</b>\npgvector/pg16\nRAG embeddings 384-dim" as AIDB #F0FFF0/E8FFE8
   rectangle "<b>Redis 7</b>\n:6379\nSesiones · Caché · Rate-limit" as Redis #FFF0F0/FFE8E8
   rectangle "<b>Groq API</b>\nLlama 3.1 8b Instant\n(servicio externo)" as Groq #F0F0FF/E8E8FF
 }

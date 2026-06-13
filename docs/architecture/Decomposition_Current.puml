@@ -65,16 +65,17 @@ wbsDiagram {
 *** <b>product-service</b>\nFastAPI · Python 3.12\nProductos · Stock · Reviews · Galería
 
 ** Comercio / Órdenes\n<b>Dominio</b>
-*** <b>order-service</b>\nFastAPI · Python 3.12\nÓrdenes · Saga · Timeout worker
+*** <b>order-service</b>\nFastAPI · Python 3.12\nÓrdenes · Saga · Timeout worker\nPagos simulados
 
 ** Asistente IA\n<b>Dominio</b>
-*** <b>ai-service</b>\nFastAPI · Python 3.12\nGroq Llama 3.1 · Rate limiting
+*** <b>ai-service</b>\nFastAPI · Python 3.12\nGroq Llama 3.1 · Rate limiting\nRAG pgvector · Embeddings
 
 ** Infraestructura\n<b>Transversal</b>
 *** <b>API Gateway</b>\nNGINX 1.27 · TLS · CORS\nRate limiting · Routing
 *** <b>spare-coordinator</b>\nWatchdog Python\nPolling /health · POST /activate
 *** <b>RabbitMQ 3</b>\nExchange events (fanout)\nExchange commerce.saga (topic)
-*** <b>PostgreSQL 16 × 4</b>\nauth · user · product · order\nDB-per-service
+*** <b>PostgreSQL 16 × 5</b>\nauth · user · product · order\nDB-per-service
+*** <b>ai-postgres (pgvector)</b>\nPostgreSQL 16 + pgvector\nÍndice semántico RAG · HNSW
 *** <b>Redis 7</b>\nSesiones · Caché · Rate-limit\nHistorial conversacional
 
 @endwbs

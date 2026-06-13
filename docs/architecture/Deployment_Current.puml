@@ -48,13 +48,14 @@ node "Maquina del Desarrollador" {
     component "<<watchdog>>\n<b>spare-coordinator</b>\nPython  polling /health 3s" as Coord #F8F8F8
     component "<<service>>\n<b>user-service</b>\nFastAPI :8000" as User #FFFFFF
     component "<<service>>\n<b>product-service</b>\nFastAPI :8003" as Prod #FFFFFF
-    component "<<service>>\n<b>order-service</b>\nFastAPI :8004  Saga" as Order #FFFFFF
-    component "<<service>>\n<b>ai-service</b>\nFastAPI :8005  Groq" as AI #FFFFFF
+    component "<<service>>\n<b>order-service</b>\nFastAPI :8004  Saga  Pagos" as Order #FFFFFF
+    component "<<service>>\n<b>ai-service</b>\nFastAPI :8005  Groq  RAG" as AI #FFFFFF
     component "<<broker>>\n<b>rabbitmq</b>\nRabbitMQ 3\nAMQP :5672  Mgmt :15672" as MQ #FFFFF0
     database "<b>auth-postgres</b>\nPostgreSQL 16 :5433" as ADB
     database "<b>user-postgres</b>\nPostgreSQL 16 :5434" as UDB
     database "<b>product-postgres</b>\nPostgreSQL 16 :5435" as PDB
     database "<b>order-postgres</b>\nPostgreSQL 16 :5436" as ODB
+    database "<b>ai-postgres</b>\npgvector/pg16  (interno :5432)\nRAG embeddings 384-dim HNSW" as AIDB
     database "<b>redis</b>\nRedis 7 :6379" as Redis
   }
 }
@@ -87,6 +88,7 @@ AuthC -[#55AA55,dashed]-> ADB
 User  -[#55AA55]->  UDB
 Prod  -[#55AA55]->  PDB
 Order -[#55AA55]->  ODB
+AI    -[#55AA55]->  AIDB : RAG pgvector
 
 Auth  -[#DD6666]->  Redis : blacklist
 Prod  -[#DD6666]->  Redis : cache
