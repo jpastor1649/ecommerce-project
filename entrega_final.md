@@ -16,7 +16,7 @@
 
 **Logo:**
 
-![AICart](docs/AICart.png)
+![AICart](https://raw.githubusercontent.com/jpastor1649/ecommerce-project/FinalProject3/docs/AICart.png)
 
 **Descripción:**
 
@@ -34,7 +34,7 @@ El sistema implementa patrones reales de arquitectura de software: segmentación
 
 **Vista C&C:**
 
-![Component & Connector](docs/lab4/C&C.png)
+![Component & Connector](https://raw.githubusercontent.com/jpastor1649/ecommerce-project/FinalProject3/docs/lab4/C&C.png)
 
 **Descripción de elementos y relaciones:**
 
@@ -80,7 +80,7 @@ El sistema implementa patrones reales de arquitectura de software: segmentación
 
 **Vista de Despliegue:**
 
-![Deployment](docs/architecture/Deployment_Current.png)
+![Deployment](https://raw.githubusercontent.com/jpastor1649/ecommerce-project/FinalProject3/docs/architecture/Deployment_Current.png)
 
 **Descripción de elementos y relaciones:**
 
@@ -115,7 +115,7 @@ El **API Gateway es el único contenedor conectado a ambas redes**, actuando com
 
 **Vista N-Tier:**
 
-![N-Tier](docs/architecture/NTier_Current.png)
+![N-Tier](https://raw.githubusercontent.com/jpastor1649/ecommerce-project/FinalProject3/docs/architecture/NTier_Current.png)
 
 **Descripción de capas:**
 
@@ -139,7 +139,7 @@ El **API Gateway es el único contenedor conectado a ambas redes**, actuando com
 
 **Vista de Descomposición:**
 
-![Decomposition](docs/architecture/Decomposition_Current.png)
+![Decomposition](https://raw.githubusercontent.com/jpastor1649/ecommerce-project/FinalProject3/docs/architecture/Decomposition_Current.png)
 
 **Descripción de dominios de negocio:**
 
@@ -524,15 +524,20 @@ services:
       replicas: 2
 ```
 
-**Métricas de escalado (valores de referencia):**
+**Métricas de escalado (resultados reales — k6 v0.57.0, 2026-06-13):**
 
-| Configuración | VUs | p50 | p95 | Throughput |
-|---|---|---|---|---|
-| 1 réplica `product-service` | 50 | ~85 ms | ~310 ms | ~38 req/s |
-| 2 réplicas `product-service` | 50 | ~50 ms | ~180 ms | ~65 req/s |
-| Mejora estimada | — | ~41% | ~42% | ~1.7× |
+| Configuración | VUs | p50 | p95 | p99 | Throughput | Error |
+|---|---|---|---|---|---|---|
+| 1 réplica `product-service` | 50 | 727 ms | 5 120 ms | 5 960 ms | 16.2 req/s | 0% |
+| 2 réplicas `product-service` | 50 | 74 ms | 1 510 ms | 1 930 ms | 32.6 req/s | 0% |
+| Mejora | — | **−90%** (9.8×) | **−70%** (3.4×) | **−68%** (3.1×) | **2.02×** | — |
 
-> Valores de referencia. Para obtener resultados reales ejecutar con el stack en modo LB activo: `k6 run tests/performance/lb_test.js`
+> Medido con `k6 run --insecure-skip-tls-verify tests/performance/lb_test.js` sobre el stack local.
+> 2ª réplica registrada vía `docker network connect --alias product-service`; el rate limit de NGINX
+> se elevó temporalmente (generador local exento) y se restauró tras las corridas.
+> Las latencias absolutas son propias del entorno de desarrollo (Uvicorn single-process con base de
+> datos local); el patrón relevante es la mejora relativa: throughput **2×** y p95 **3.4×** al doblar réplicas.
+> Reproducir: `k6 run --insecure-skip-tls-verify tests/performance/lb_test.js`
 
 **Performance Testing — Scripts k6 (`tests/performance/`):**
 

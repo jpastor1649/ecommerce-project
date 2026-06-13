@@ -26,7 +26,7 @@ export default function () {
   check(res, {
     'status 200': (r) => r.status === 200,
     'tiene items': (r) => {
-      try { return JSON.parse(r.body).items?.length > 0; } catch { return false; }
+      try { return JSON.parse(r.body).length > 0; } catch { return false; }
     },
   });
   sleep(0.5);
