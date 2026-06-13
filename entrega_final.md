@@ -5,9 +5,10 @@
 **Nombre del grupo:** Grupo D
 
 **Integrantes:**
-- Juan Pablo Pastor
-
----
+- John Pastor
+- Isabel Ospina
+- Andres Perdomo
+- Juan Castañeda
 
 ## Software System
 
