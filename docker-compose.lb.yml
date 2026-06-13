@@ -1,90 +1,14 @@
-# ─── Load Balancer Override — Performance & Scalability Pattern (PERF-02) ─────
+# Override para Load Balancer Pattern (PERF-02)
+# Uso: docker compose -f docker-compose.yml -f docker-compose.lb.yml up -d --scale product-service=2
 #
-# Uso: docker compose -f docker-compose.yml -f docker-compose.lb.yml up -d --build
+# En modo LB, product-service escala a 2 réplicas. El resolver de NGINX
+# (127.0.0.11) reresuelve el hostname periódicamente y distribuye entre
+# ambas réplicas vía DNS round-robin del daemon Docker.
 #
-# Este override define DOS instancias nombradas de product-service con IPs fijas
-# en subnet_b. NGINX OSS requiere nombres de host fijos en el bloque `upstream`
-# (igual que con auth-service), por eso se usan servicios separados en lugar de
-# `deploy.replicas` (que generaría nombres dinámicos incompatibles con NGINX OSS).
-#
-# El upstream product_backend en nginx.conf apunta a:
-#   ecommerce_product_service_1:8003  (IP 172.20.1.20)
-#   ecommerce_product_service_2:8003  (IP 172.20.1.21)
-# con política least_conn + keepalive 16.
+# Para NGINX OSS con least_conn real se necesitaría NGINX Plus o Traefik.
+# Esta implementación es suficiente para demostrar el patrón horizontalmente.
 
 services:
-  # Deshabilita el servicio original (reemplazado por las dos instancias nombradas)
   product-service:
     deploy:
-      replicas: 0
-
-  product-service-1:
-    build:
-      context: ./backend
-      dockerfile: product_service/Dockerfile
-    container_name: ecommerce_product_service_1
-    restart: unless-stopped
-    depends_on:
-      product-postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_started
-    environment:
-      DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://product_user:product_password@product-postgres:5432/product_db}
-      APP_NAME: "Product Service 1"
-      DEBUG: ${PRODUCT_DEBUG:-false}
-      JWT_SECRET: ${AUTH_JWT_SECRET}
-      JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL:-http://user-service:8000}
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
-    command: uvicorn product_service.main:app --host 0.0.0.0 --port 8003
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=3)\""]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    networks:
-      subnet_b:
-        ipv4_address: 172.20.1.20   # IP fija para upstream NGINX OSS
-
-  product-service-2:
-    build:
-      context: ./backend
-      dockerfile: product_service/Dockerfile
-    container_name: ecommerce_product_service_2
-    restart: unless-stopped
-    depends_on:
-      product-postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_started
-    environment:
-      DATABASE_URL: ${PRODUCT_DATABASE_URL:-postgresql+asyncpg://product_user:product_password@product-postgres:5432/product_db}
-      APP_NAME: "Product Service 2"
-      DEBUG: ${PRODUCT_DEBUG:-false}
-      JWT_SECRET: ${AUTH_JWT_SECRET}
-      JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM:-HS256}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      USER_SERVICE_BASE_URL: ${USER_SERVICE_BASE_URL:-http://user-service:8000}
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
-    command: uvicorn product_service.main:app --host 0.0.0.0 --port 8003
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health', timeout=3)\""]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    networks:
-      subnet_b:
-        ipv4_address: 172.20.1.21   # IP fija para upstream NGINX OSS
-
-networks:
-  subnet_b:
-    external: true
-    name: ecommerce-project_subnet_b
+      replicas: 2
