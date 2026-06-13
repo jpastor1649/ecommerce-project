@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { API_BASE_URL } from '../../shared/config/api'
 import { getAuthHeaders } from '../../shared/lib/auth'
+import PaymentModal from './PaymentModal'
 import './OrdersPage.css'
 
 const STATUS_OPTIONS = [
@@ -16,6 +17,8 @@ const STATUS_OPTIONS = [
 ]
 
 const CANCELLABLE_STATUSES = new Set(['pending_stock_confirmation', 'confirmed', 'pending', 'paid'])
+
+const PAYABLE_STATUSES = new Set(['confirmed'])
 
 function formatCurrency(value) {
   const number = Number(value)
@@ -90,6 +93,7 @@ export default function OrdersPage({ initialData = {} }) {
   const [refreshing, setRefreshing] = useState(false)
   const [resolvingSellers, setResolvingSellers] = useState(false)
   const [cancellingId, setCancellingId] = useState('')
+  const [payingOrder, setPayingOrder] = useState(null)
   const [error, setError] = useState(initialData.error || '')
   const [success, setSuccess] = useState('')
   const [sellerLookupWarning, setSellerLookupWarning] = useState('')
@@ -264,6 +268,16 @@ export default function OrdersPage({ initialData = {} }) {
     void fetchOrders(statusFilter, 'refresh')
   }
 
+  const handlePaymentCompleted = (payment) => {
+    const paidOrderId = payingOrder?.id
+    setPayingOrder(null)
+    setError('')
+    setSuccess(`Order ${shortId(paidOrderId)} was paid successfully (payment ${shortId(payment?.id)}).`)
+    setOrders((prev) =>
+      prev.map((order) => (order.id === paidOrderId ? { ...order, status: 'paid' } : order))
+    )
+  }
+
   const handleCancelOrder = async (orderId) => {
     if (!orderId || cancellingId) {
       return
@@ -349,6 +363,7 @@ export default function OrdersPage({ initialData = {} }) {
           {orders.map((order) => {
             const status = String(order.status || '').toLowerCase()
             const canCancel = CANCELLABLE_STATUSES.has(status)
+            const canPay = PAYABLE_STATUSES.has(status)
             const items = Array.isArray(order.items) ? order.items : []
 
             return (
@@ -404,6 +419,14 @@ export default function OrdersPage({ initialData = {} }) {
                 <footer className="order-actions">
                   <button
                     type="button"
+                    className="order-pay"
+                    onClick={() => setPayingOrder(order)}
+                    disabled={!canPay || Boolean(cancellingId)}
+                  >
+                    Pay
+                  </button>
+                  <button
+                    type="button"
                     className="order-cancel"
                     onClick={() => handleCancelOrder(order.id)}
                     disabled={!canCancel || cancellingId === order.id}
@@ -415,6 +438,14 @@ export default function OrdersPage({ initialData = {} }) {
             )
           })}
         </div>
+      )}
+
+      {payingOrder && (
+        <PaymentModal
+          order={payingOrder}
+          onClose={() => setPayingOrder(null)}
+          onPaid={handlePaymentCompleted}
+        />
       )}
     </section>
   )

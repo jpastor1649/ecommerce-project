@@ -14,6 +14,9 @@ from order_service.src.schemas.orders import (
     OrderStatusUpdate,
 )
 from order_service.src.schemas.events import build_envelope
+from order_service.src.models.payment import PaymentStatus
+from order_service.src.schemas.payments import PaymentCreate, PaymentResponse, PaymentListResponse
+from order_service.src.services.payment_service import pay_order, list_payments
 from order_service.src.services.order_service import (
     create_order,
     get_order,
@@ -198,3 +201,70 @@ async def update_order_status_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     return await update_order_status(db, order_id, payload.status)
+
+
+@router.post(
+    "/{order_id}/pay",
+    response_model=PaymentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Pay an order (simulated gateway)",
+    description=(
+        "Processes a simulated payment for a confirmed order. "
+        "Card numbers ending in 0000 are declined (testing). "
+        "On success the order transitions to 'paid' and ORDER_PAID is emitted."
+    ),
+)
+async def pay_order_endpoint(
+    order_id: UUID,
+    payload: PaymentCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    payment, order = await pay_order(db, order_id, current_user.id, payload)
+
+    if payment.status == PaymentStatus.completed:
+        correlation_id = _extract_correlation_id(request) or str(order.saga_id or order.id)
+        order_dict = _order_to_dict(order)
+        payment_id = str(payment.id)
+
+        def publish_order_paid():
+            # Broadcast to fanout `events` exchange
+            published = event_publisher.publish("ORDER_PAID", order_dict)
+            if not published:
+                logger.warning("ORDER_PAID fanout event failed for order_id=%s", order.id)
+
+            # Saga routing — product_service may consume order.paid in the future
+            envelope = build_envelope(
+                "ORDER_PAID",
+                {
+                    "order_id": str(order.id),
+                    "payment_id": payment_id,
+                    "user_id": str(order.user_id),
+                    "amount": str(payment.amount),
+                    "reservation_id": str(order.reservation_id) if order.reservation_id else None,
+                },
+                correlation_id,
+            )
+            published = event_publisher.publish_saga("order.paid", envelope)
+            if not published:
+                logger.warning("ORDER_PAID saga event failed for order_id=%s", order.id)
+
+        background_tasks.add_task(publish_order_paid)
+
+    return payment
+
+
+@router.get(
+    "/{order_id}/payments",
+    response_model=PaymentListResponse,
+    summary="List payment attempts for an order",
+)
+async def list_payments_endpoint(
+    order_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    payments = await list_payments(db, order_id, current_user.id)
+    return PaymentListResponse(total=len(payments), items=payments)

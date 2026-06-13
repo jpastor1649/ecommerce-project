@@ -9,6 +9,7 @@ from order_service.src.core.config.settings import settings
 from order_service.src.core.database import engine, Base
 from order_service.src.models import order as _order_models  # noqa: F401 — registers ORM tables
 from order_service.src.models import processed_event as _pe_models  # noqa: F401
+from order_service.src.models import payment as _payment_models  # noqa: F401
 
 
 @asynccontextmanager
