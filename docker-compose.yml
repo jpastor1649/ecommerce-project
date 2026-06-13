@@ -72,6 +72,24 @@ services:
     networks:
       - subnet_b
 
+  ai-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ecommerce_ai_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AI_POSTGRES_USER:-ai_user}
+      POSTGRES_PASSWORD: ${AI_POSTGRES_PASSWORD:-ai_password}
+      POSTGRES_DB: ${AI_POSTGRES_DB:-ai_db}
+    volumes:
+      - ai_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AI_POSTGRES_USER:-ai_user} -d ${AI_POSTGRES_DB:-ai_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - subnet_b
+
   # ─── INFRASTRUCTURE ────────────────────────────────────────────────────────
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -303,6 +321,12 @@ services:
       REDIS_URL: ${AI_REDIS_URL:-redis://redis:6379/1}
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      # RAG / pgvector configuration
+      AI_DATABASE_URL: ${AI_DATABASE_URL:-postgresql+asyncpg://ai_user:ai_password@ai-postgres:5432/ai_db}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      AI_INDEX_REFRESH_SECONDS: ${AI_INDEX_REFRESH_SECONDS:-300}
+      AI_RAG_TOP_K: ${AI_RAG_TOP_K:-8}
+      AI_PROFILE_WEIGHT: ${AI_PROFILE_WEIGHT:-0.25}
       # Rate limiting configuration
       AI_RATE_LIMIT_REQUESTS: ${AI_RATE_LIMIT_REQUESTS:-10}
       AI_RATE_LIMIT_WINDOW_SECONDS: ${AI_RATE_LIMIT_WINDOW_SECONDS:-60}
@@ -310,6 +334,8 @@ services:
       product-service:
         condition: service_started
       redis:
+        condition: service_healthy
+      ai-postgres:
         condition: service_healthy
     command: uvicorn AI_service.main:app --host 0.0.0.0 --port 8005
     healthcheck:
@@ -396,4 +422,5 @@ volumes:
   user_postgres_data:
   product_postgres_data:
   order_postgres_data:
+  ai_postgres_data:
   rabbitmq_data:

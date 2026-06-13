@@ -39,6 +39,28 @@ class Settings(BaseSettings):
         default="redis://redis:6379/1",
         alias="REDIS_URL",
     )
+    ai_database_url: str = Field(
+        default="postgresql+asyncpg://ai_user:ai_password@ai-postgres:5432/ai_db",
+        alias="AI_DATABASE_URL",
+    )
+
+    # ── RAG / embeddings ──────────────────────────────────────────────────────
+    ai_embedding_model: str = Field(
+        default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        alias="AI_EMBEDDING_MODEL",
+    )
+    ai_embedding_dimensions: int = Field(default=384, alias="AI_EMBEDDING_DIMENSIONS")
+    ai_index_refresh_seconds: int = Field(
+        default=300,
+        alias="AI_INDEX_REFRESH_SECONDS",
+        description="Interval between product index sync cycles",
+    )
+    ai_rag_top_k: int = Field(default=8, alias="AI_RAG_TOP_K")
+    ai_profile_weight: float = Field(
+        default=0.25,
+        alias="AI_PROFILE_WEIGHT",
+        description="Weight of the user purchase-profile vector in ranking (0-1)",
+    )
     auth_jwt_secret: str = Field(
         default="",
         alias="AUTH_JWT_SECRET",
