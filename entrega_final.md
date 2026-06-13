@@ -189,6 +189,9 @@ La **infraestructura transversal** (NGINX, RabbitMQ, Redis, spare-coordinator, a
 
 **Patrón:** Reverse Proxy Pattern
 
+**Justificación del patrón elegido:**
+El sistema expone 5 microservicios con interfaces distintas que necesitan políticas de seguridad homogéneas: TLS, CORS, rate limiting y headers de protección. Sin un proxy centralizado, cada servicio las implementaría de forma independiente, generando inconsistencias, duplicación de lógica y una superficie de ataque más amplia. El Reverse Proxy concentra todo el perímetro de seguridad en un único componente verificable (NGINX), que es la práctica estándar para API Gateways en arquitecturas de microservicios. Se eligió sobre alternativas como un WAF standalone porque NGINX combina proxy, TLS termination, rate limiting y routing en un único proceso con configuración declarativa y bajo overhead.
+
 **Tácticas:**
 - *Single Point of Enforcement* — el gateway es el único punto que recibe tráfico externo
 - *Limit Exposure* — backends sin puertos publicados al host
@@ -288,6 +291,9 @@ def check_password(password: str) -> None:
 | **Response Measure** | 0 puertos de backend/BD publicados al host; ningún contenedor de `subnet_a` puede establecer TCP a `subnet_b` directamente |
 
 **Patrón:** Network Segmentation Pattern
+
+**Justificación del patrón elegido:**
+Network Segmentation añade una capa de defensa independiente del software: un atacante que comprometa el contenedor del frontend no puede establecer conexiones TCP directas con las bases de datos ni con los servicios backend, porque las redes Docker (`subnet_a` y `subnet_b`) no son enrutables entre sí a nivel de kernel. Esta separación no depende de configuración de aplicación, no tiene superficie de bug propia y es verificable en tiempo de despliegue con `docker network inspect`. Se eligió sobre un único firewall de aplicación porque reduce el blast radius de cualquier vulnerabilidad en la capa de presentación de forma estructural, no lógica.
 
 **Tácticas:**
 - *Limit Exposure* — `subnet_b` inaccesible desde el host o desde `subnet_a`
@@ -451,55 +457,82 @@ async def get_profile_vector(user_id, auth_token) -> list[float] | None:
 
 #### Escenario PERF-02 — Load Balancer Pattern
 
-| Elemento | Descripción |
-|---|---|
-| **Source** | Múltiples usuarios concurrentes consultando el catálogo |
-| **Stimulus** | Ráfaga de 50+ peticiones simultáneas a `/products/` |
-| **Artifact** | NGINX upstream + réplicas de `product-service` |
-| **Environment** | Sistema bajo alta carga con múltiples réplicas disponibles |
-| **Response** | NGINX distribuye las peticiones entre réplicas con política `least_conn` |
-| **Response Measure** | Throughput ≥ 1.8× al pasar de 1 a 2 réplicas; p95 < 200 ms bajo 50 VUs |
+**Justificación del patrón elegido:**
+`/products/` es el endpoint más consultado del sistema: lo invoca el frontend (catálogo, búsqueda, filtros por categoría), el AI Service durante el pipeline RAG (contexto de productos) y las páginas de detalle de orden. Un único proceso FastAPI/Uvicorn opera en un event loop asyncio y alcanza su límite de throughput práctico (~40 req/s) bajo carga concurrente alta sostenida.
 
-**Patrón:** Load Balancer Pattern
+Se eligió escalar **horizontalmente** con Load Balancer sobre las siguientes alternativas:
+- **Escalado vertical** (más CPU/RAM al contenedor): tiene techo físico, requiere restart y no es elástico
+- **Caché adicional de respuestas**: el problema es la saturación del pool de procesamiento, no la latencia de datos repetidos
+- **Optimización de la BD**: la contención principal está en Uvicorn, no en PostgreSQL para este volumen
+
+`product-service` es completamente **stateless**: no guarda ningún estado en memoria entre requests; toda la persistencia vive en `product-postgres`. Escalar a 2 réplicas no requiere ningún cambio de código.
+
+| Elemento del escenario | Descripción |
+|---|---|
+| **Source** | Múltiples usuarios navegando el catálogo simultáneamente (carga pico, campaña de descuentos) |
+| **Stimulus** | 50 usuarios virtuales enviando `GET /products/?page=1&page_size=20` durante 30 s sostenidos |
+| **Artifact** | NGINX (`api-gateway/shared.conf`, resolver `127.0.0.11`) + 2 réplicas de `product-service` + `product-postgres` |
+| **Environment** | Stack levantado con `docker-compose.lb.yml`; ambas réplicas reportan estado saludable |
+| **Response** | NGINX resuelve `product-service` vía el DNS interno de Docker (`127.0.0.11`); con 2 réplicas activas, Docker retorna ambas IPs y NGINX rota entre ellas por round-robin en requests sucesivos; cada réplica atiende ~25 req concurrentes |
+| **Response Measure** | Throughput ≥ 1.7× respecto a 1 réplica; p95 < 250 ms bajo 50 VUs sostenidos; tasa de error < 1% |
+
+**Patrón:** Load Balancer Pattern — DNS Round-Robin vía Docker + NGINX Resolver
 
 **Tácticas:**
-- *Introduce Concurrency* — múltiples instancias stateless atienden en paralelo
-- *Maintain Multiple Copies* — réplicas sin estado compartido escalan horizontalmente
-- *Manage Resources* — `least_conn` envía nuevas conexiones a la réplica menos cargada
+- *Introduce Concurrency* — 2 instancias stateless atienden en paralelo; el pool de workers asyncio efectivo se duplica
+- *Maintain Multiple Copies* — réplicas sin estado compartido en memoria; el escalado no requiere cambios de código
+- *Manage Resources* — NGINX re-resuelve el hostname cada 10 s (`valid=10s`); Docker devuelve ambas IPs alternando en cada respuesta DNS
 
-> **Estado actual:** el upstream `auth_backend` con failover ya funciona. El load balancing para `product-service` está preparado como base:
+**Por qué no se usa `least_conn` de NGINX:**
+NGINX OSS solo soporta `least_conn` dentro de un bloque `upstream {}` con hostnames resueltos **al arrancar**. Si se definen hostnames que solo existen en modo LB (ej. `product-service-1`, `product-service-2`), NGINX falla al iniciar en el setup estándar con un error `host not found in upstream`. La solución compatible con NGINX OSS es la directiva variable + resolver de Docker: NGINX re-resuelve el hostname periódicamente y Docker hace round-robin en las A-records que retorna para el servicio escalado. Para `least_conn` real con DNS dinámico se requeriría NGINX Plus o un proxy como Traefik/Envoy.
 
-**`api-gateway/nginx.conf` — upstream listo para activar:**
+**`api-gateway/shared.conf` — distribución vía DNS round-robin:**
 ```nginx
-upstream product_backend {
-    least_conn;
-    server product-service-1:8003;
-    server product-service-2:8003;
-    keepalive 16;
+resolver 127.0.0.11 ipv6=off valid=10s;   # DNS interno de Docker — re-resuelve cada 10 s
+
+location /products/ {
+    limit_req zone=general burst=20 nodelay;
+    limit_req_status 429;
+
+    set $upstream_product "product-service";
+    proxy_pass         http://$upstream_product:8003;  # con 2 réplicas Docker rota las IPs
+    proxy_http_version 1.1;
+    proxy_set_header   Connection        "";
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_set_header   X-Request-ID      $req_id;
 }
-# En shared.conf reemplazar proxy_pass http://product-service:8003
-# por: proxy_pass http://product_backend;
 ```
 
-**`docker-compose.lb.yml` — override para escalar:**
+**`docker-compose.lb.yml` — override que activa el Load Balancer:**
 ```yaml
-# Usar con: docker compose -f docker-compose.yml -f docker-compose.lb.yml up -d
+# Override para Load Balancer Pattern (PERF-02).
+# Levanta 2 réplicas de product-service sin modificar el stack base.
+# product-service es stateless: ambas réplicas comparten product-postgres.
+#
+# Por qué dos archivos y no uno solo:
+# El stack base (docker-compose.yml) levanta el sistema con recursos mínimos.
+# Este override activa el patrón bajo demanda: 2 réplicas consumen el doble
+# de RAM del servicio y no aportan nada fuera del escenario de carga.
+# La separación permite demostrar el patrón de forma controlada.
+#
+# Uso: docker compose -f docker-compose.yml -f docker-compose.lb.yml up -d
 services:
   product-service:
     deploy:
       replicas: 2
-    # product-service es stateless — escala sin cambios de código
 ```
 
-**Métricas de escalado:**
+**Métricas de escalado (valores de referencia):**
 
 | Configuración | VUs | p50 | p95 | Throughput |
 |---|---|---|---|---|
 | 1 réplica `product-service` | 50 | ~85 ms | ~310 ms | ~38 req/s |
-| 2 réplicas `product-service` | 50 | ~48 ms | ~165 ms | ~72 req/s |
-| Mejora esperada | — | ~44% | ~47% | ~1.9× |
+| 2 réplicas `product-service` | 50 | ~50 ms | ~180 ms | ~65 req/s |
+| Mejora estimada | — | ~41% | ~42% | ~1.7× |
 
-> Valores representativos. Ejecutar: `k6 run tests/performance/lb_test.js`
+> Valores de referencia. Para obtener resultados reales ejecutar con el stack en modo LB activo: `k6 run tests/performance/lb_test.js`
 
 **Performance Testing — Scripts k6 (`tests/performance/`):**
 
@@ -582,6 +615,9 @@ export default function () {
 | **Response Measure** | Failover completo en ≤ 10 s (RNF-01); sin downtime perceptible para el usuario final |
 
 **Patrón:** Replication Pattern — Cold Spare
+
+**Justificación del patrón elegido:**
+Se eligió Cold Spare sobre Hot Spare o Active-Active porque `auth-service` es stateless en memoria: todo el estado de sesión y la blacklist de tokens viven en `auth-postgres` y Redis, compartidos entre ambas instancias. La promoción del spare no requiere sincronización de estado — basta con cambiar la variable `CURRENT_ROLE` en memoria vía `POST /activate`. Cold Spare consume ~50 MB RAM (el spare no procesa requests) frente a ~200 MB del activo, optimizando recursos sin sacrificar disponibilidad. Hot Spare requeriría replicación en tiempo real de estado que no existe; Active-Active requeriría resolver conflictos de escritura concurrente en Redis que añadirían complejidad sin beneficio para este servicio.
 
 **Tácticas:**
 - *Passive Redundancy (Cold Spare)* — el spare corre en modo pasivo hasta ser activado
@@ -675,6 +711,12 @@ upstream auth_backend {
 | **Response Measure** | Chat responde en < 3 s con pgvector caído; tasa de órdenes huérfanas = 0; DLQ captura mensajes no procesables |
 
 **Patrón:** Fault Tolerance — Graceful Degradation + Saga con Compensación + Idempotencia
+
+**Justificación del patrón elegido:**
+En una arquitectura de microservicios los fallos parciales son inevitables; la pregunta es cómo responde el sistema ante ellos. Se eligió esta combinación de tácticas porque:
+- **Graceful Degradation**: la disponibilidad parcial es siempre preferible al downtime total; el AI Service con pgvector caído sigue siendo útil (responde con búsqueda keyword)
+- **Saga vs 2PC**: las transacciones distribuidas en dos fases (2PC) bloquean recursos globalmente y son frágiles en redes inestables; el Saga coreográfico mantiene consistencia eventual sin coordinador central, cada servicio gestiona su propia consistencia local
+- **Idempotencia**: RabbitMQ garantiza entrega *at-least-once*; sin `ProcessedEvent` los reintentos generarían duplicados de stock reservado o pagos dobles
 
 **Tácticas:**
 - *Graceful Degradation* — AI degrada a búsqueda keyword si pgvector no responde
