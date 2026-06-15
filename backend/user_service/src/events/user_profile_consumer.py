@@ -50,7 +50,7 @@ class UserProfileEventConsumer:
                 )
                 channel = self._connection.channel()
                 channel.queue_declare(queue=self.queue_name, durable=True)
-                channel.basic_qos(prefetch_count=1)
+                channel.basic_qos(prefetch_count=10)
                 channel.basic_consume(
                     queue=self.queue_name,
                     on_message_callback=self._on_message,
