@@ -34,7 +34,7 @@ El sistema implementa patrones reales de arquitectura de software: segmentación
 
 **Vista C&C:**
 
-![Component & Connector](https://raw.githubusercontent.com/jpastor1649/ecommerce-project/FinalProject3/docs/lab4/C&C.png)
+![Component & Connector](docs/architecture/C%26C.png)
 
 **Descripción de elementos y relaciones:**
 
