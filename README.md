@@ -46,7 +46,7 @@ El proyecto implementa patrones reales de arquitectura de software: segmentació
 
 ### Vista de Componentes y Conectores
 
-![Component & Connector](docs/lab4/C%26C.png)
+![Component & Connector](docs/architecture/C%26C.png)
 
 #### Descripción de elementos y relaciones
 
