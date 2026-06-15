@@ -209,30 +209,32 @@ services:
       - subnet_b
 
   user-service:
-    build:
-      context: ./backend
-      dockerfile: user_service/Dockerfile
-    container_name: ecommerce_user_service
-    restart: unless-stopped
-    depends_on:
-      user-postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_started
-    environment:
-      DATABASE_URL: ${USER_DATABASE_URL}
-      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
-      USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    networks:
-      - subnet_b
+      build:
+        context: ./backend
+        dockerfile: user_service/Dockerfile
+      restart: unless-stopped
+      depends_on:
+        user-postgres:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+        rabbitmq:
+          condition: service_started
+      environment:
+        DATABASE_URL: ${USER_DATABASE_URL}
+        RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+        USER_PROFILE_QUEUE_NAME: ${USER_PROFILE_QUEUE_NAME:-user_profile_create_queue}
+      healthcheck:
+        test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+        start_period: 20s
+      networks:
+        - subnet_b
+      # NUEVA TÁCTICA DE PERFORMANCE: Escalabilidad horizontal por software
+      deploy:
+        replicas: 3
 
   product-service:
     build:
